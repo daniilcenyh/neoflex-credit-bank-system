@@ -9,7 +9,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,metrics,loggers
   endpoint:
     prometheus:
       access: read_only
@@ -21,6 +21,17 @@ management:
     enabled: true
     sampling:
       probability: 1.0
+  metrics:
+    distribution:
+      percentiles-histogram:
+        all: true
+      slo:
+        "[http.server.requests]": 50ms,100ms,200ms,500ms,1s,2s
+  info:
+    env:
+      enabled: true
+    git:
+      mode: full
 
 credit:
   base-rate: ${BASE_RATE:15.0}
