@@ -72,6 +72,28 @@ services:
       - --storage.path=/var/lib/alloy/data
       - /etc/alloy/config.alloy
 
+  calculator-api:
+    build:
+      context: ./calculator-service
+      dockerfile: Dockerfile
+    container_name: calculator-api
+    ports:
+      - "8092:8092"
+    working_dir: /app
+    environment:
+#      POSTGRES_HOST: person-postgres
+#      POSTGRES_PORT: 5432
+      SPRING_PROFILES_ACTIVE: docker
+      OTLP_EXPORTER_ENDPOINT: http://tempo:4318
+    depends_on:
+      nexus:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-i", "http://localhost:8092/actuator/health" ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
 #  grafana:
 #    image: grafana/grafana:10.3.1
 #    container_name: grafana
@@ -100,3 +122,13 @@ services:
 #      interval: 10s
 #      timeout: 5s
 #      retries: 10
+
+
+volumes:
+  artifacts:
+  tempo_data:
+  nexus-data:
+  loki_data:
+  loki_chunks:
+  loki_index:
+  loki_rules:

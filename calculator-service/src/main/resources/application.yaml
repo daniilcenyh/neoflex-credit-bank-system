@@ -24,12 +24,12 @@ management:
 
 credit:
   base-rate: ${BASE_RATE:15.0}
-  insurance-cost: ${INSURANCE_COST}100000
-  insurance-rate-discount: 3.0
-  salary-rate-discount: 1.0
-  min-amount: 20000
-  min-term: 6
-  min-age: 18
+  insurance-cost: ${INSURANCE_COST:100000}
+  insurance-rate-discount: ${INSURANCE_RATE_DISCOUNT:3.0}
+  salary-rate-discount: ${SALARY_RATE_DISCOUNT:1.0}
+  min-amount: ${MIN_AMOUNT:20000}
+  min-term: ${MIN_TERM:6}
+  min-age: ${MIN_AGE:18}
 
 otel:
   exporter:
