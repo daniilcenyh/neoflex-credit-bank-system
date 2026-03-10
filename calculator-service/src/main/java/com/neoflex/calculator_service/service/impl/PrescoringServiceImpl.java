@@ -45,6 +45,12 @@ public class PrescoringServiceImpl implements PrescoringService {
         this.validator.validate(request);
 
         List<LoanOfferDto> offers = new ArrayList<>();
+
+        offers.add(createOffer(request, false, false));
+        offers.add(createOffer(request, false, true));
+        offers.add(createOffer(request, true, false));
+        offers.add(createOffer(request, true, true));
+
         offers.sort(Comparator.comparing(LoanOfferDto::getRate));
 
         log.info("Сгенерировано {} предложений", offers.size());
