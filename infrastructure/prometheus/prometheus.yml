@@ -12,6 +12,9 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: [ 'calculator-api:8092' ]
+        labels:
+          application: 'calculator-api'
+          environment: 'production'
 
   - job_name: grafana
     metrics_path: /metrics
