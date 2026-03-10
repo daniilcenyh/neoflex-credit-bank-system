@@ -1,0 +1,43 @@
+server:
+  port: 8092
+
+spring:
+  application:
+    name: calculator-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      access: read_only
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+
+credit:
+  base-rate: 15.0
+  insurance-cost: 100000
+  insurance-rate-discount: 3.0
+  salary-rate-discount: 1.0
+  min-amount: 20000
+  min-term: 6
+
+otel:
+  exporter:
+    otlp:
+      endpoint: ${OTLP_EXPORTER_ENDPOINT:http://localhost:4318}
+      protocol: http/protobuf
+  logs:
+    exporter: none
+  metrics:
+    exporter: none
+logging:
+  config: "classpath:logback.xml"

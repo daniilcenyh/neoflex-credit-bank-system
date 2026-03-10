@@ -1,0 +1,485 @@
+openapi: 3.0.0
+info:
+  title: Calculator API
+  description: REST API для расчета кредитных предложений и скоринга клиентов
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /calculator/offers:
+    post:
+      summary: Расчёт возможных условий кредита
+      description: На основе базовых данных клиента генерирует 4 кредитных предложения с разными комбинациями услуг (страховка/зарплатный клиент)
+      operationId: calculateOffers
+      tags:
+        - Credit Calculator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoanStatementRequestDto'
+      responses:
+        '200':
+          description: Успешный расчёт предложений
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LoanOfferDto'
+        '400':
+          description: Ошибка валидации (прескоринг не пройден)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /calculator/calc:
+    post:
+      summary: Полный расчет параметров кредита
+      description: Валидация данных, скоринг клиента и расчет всех параметров кредита с графиком платежей
+      operationId: calculateCredit
+      tags:
+        - Credit Calculator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScoringDataDto'
+      responses:
+        '200':
+          description: Успешный расчет кредита
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditDto'
+        '400':
+          description: Ошибка валидации или отказ в кредите по условиям скоринга
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+
+components:
+  schemas:
+    # Enums
+    Gender:
+      type: string
+      enum: [MALE, FEMALE]
+      description: Пол клиента
+
+    MaritalStatus:
+      type: string
+      enum: [MARRIED, DIVORCED, SINGLE, WIDOWED]
+      description: Семейное положение
+
+    EmploymentStatus:
+      type: string
+      enum: [EMPLOYED, SELF_EMPLOYED, BUSINESS_OWNER, UNEMPLOYED]
+      description: Статус занятости
+
+    Position:
+      type: string
+      enum: [# Государственная служба и бюджетная сфера
+        CIVIL_SERVANT,           # Госслужащий
+        MILITARY,                 # Военнослужащий
+        TEACHER,                  # Учитель/Педагог
+        DOCTOR,                   # Врач
+        POLICE,                   # Сотрудник полиции/MВД
+
+        # IT и инженерия
+        IT_SPECIALIST,           # IT-специалист
+        ENGINEER,                 # Инженер
+        PROGRAMMER,               # Программист
+        SYSTEM_ADMIN,            # Системный администратор
+
+        # Менеджмент и офис
+        TOP_MANAGER,             # Топ-менеджер
+        MIDDLE_MANAGER,          # Менеджер среднего звена
+        HEAD_OF_DEPARTMENT,      # Руководитель отдела
+        OFFICE_MANAGER,          # Офис-менеджер
+
+        # Рабочие специальности
+        WORKER,                   # Рабочий
+        DRIVER,                   # Водитель
+        CONSTRUCTOR,              # Строитель
+        MACHINIST,                # Машинист/Оператор станков
+        ELECTRICIAN,              # Электрик
+
+        # Торговля и услуги
+        SALES_MANAGER,           # Менеджер по продажам
+        CASHIER,                  # Кассир
+        COURIER,                  # Курьер
+        SECURITY,                 # Охранник
+
+        # Творческие и прочие
+        ENTREPRENEUR,             # Индивидуальный предприниматель (ИП)
+        FREELANCER,               # Фрилансер
+        STUDENT,                  # Студент
+        RETIRED,                  # Пенсионер (работающий)
+        UNEMPLOYED                # Безработный
+      ]
+      description: Должность
+
+    # Request DTOs
+    LoanStatementRequestDto:
+      type: object
+      description: Запрос на предварительный расчет кредита
+      required:
+        - amount
+        - term
+        - firstName
+        - lastName
+        - email
+        - birthdate
+        - passportSeries
+        - passportNumber
+      properties:
+        amount:
+          type: number
+          format: decimal
+          description: Запрашиваемая сумма кредита
+          example: 500000
+          minimum: 20000
+        term:
+          type: integer
+          description: Срок кредита в месяцах
+          example: 12
+          minimum: 6
+        firstName:
+          type: string
+          description: Имя (латинские буквы, 2-30 символов)
+          pattern: '^[A-Za-z]{2,30}$'
+          example: Ivan
+        lastName:
+          type: string
+          description: Фамилия (латинские буквы, 2-30 символов)
+          pattern: '^[A-Za-z]{2,30}$'
+          example: Ivanov
+        middleName:
+          type: string
+          description: Отчество (латинские буквы, 2-30 символов, опционально)
+          pattern: '^[A-Za-z]{2,30}$'
+          example: Ivanovich
+        email:
+          type: string
+          format: email
+          description: Email адрес
+          pattern: '^[a-z0-9A-Z_!#$%&''*+/=?`{|}~^.-]+@[a-z0-9A-Z.-]+$'
+          example: ivan@mail.com
+        birthdate:
+          type: string
+          format: date
+          description: Дата рождения (гггг-мм-дд)
+          example: 1990-01-01
+        passportSeries:
+          type: string
+          description: Серия паспорта (4 цифры)
+          pattern: '^\d{4}$'
+          example: '1234'
+        passportNumber:
+          type: string
+          description: Номер паспорта (6 цифр)
+          pattern: '^\d{6}$'
+          example: '123456'
+
+    ScoringDataDto:
+      type: object
+      description: Полные данные для скоринга
+      required:
+        - amount
+        - term
+        - firstName
+        - lastName
+        - gender
+        - birthdate
+        - passportSeries
+        - passportNumber
+        - passportIssueDate
+        - passportIssueBranch
+        - maritalStatus
+        - dependentAmount
+        - employment
+        - accountNumber
+        - isInsuranceEnabled
+        - isSalaryClient
+      properties:
+        amount:
+          type: number
+          format: decimal
+          description: Сумма кредита
+          example: 500000
+        term:
+          type: integer
+          description: Срок кредита в месяцах
+          example: 12
+        firstName:
+          type: string
+          description: Имя
+          example: Ivan
+        lastName:
+          type: string
+          description: Фамилия
+          example: Ivanov
+        middleName:
+          type: string
+          description: Отчество
+          example: Ivanovich
+        gender:
+          $ref: '#/components/schemas/Gender'
+        birthdate:
+          type: string
+          format: date
+          description: Дата рождения
+          example: 1990-01-01
+        passportSeries:
+          type: string
+          description: Серия паспорта
+          example: '1234'
+        passportNumber:
+          type: string
+          description: Номер паспорта
+          example: '123456'
+        passportIssueDate:
+          type: string
+          format: date
+          description: Дата выдачи паспорта
+          example: 2010-01-01
+        passportIssueBranch:
+          type: string
+          description: Кем выдан паспорт
+          example: Отделение УФМС России по г. Москва
+        maritalStatus:
+          $ref: '#/components/schemas/MaritalStatus'
+        dependentAmount:
+          type: integer
+          description: Количество иждивенцев
+          minimum: 0
+          example: 2
+        employment:
+          $ref: '#/components/schemas/EmploymentDto'
+        accountNumber:
+          type: string
+          description: Номер банковского счета
+          example: '40817810000000000001'
+        isInsuranceEnabled:
+          type: boolean
+          description: Флаг подключения страховки
+          example: true
+        isSalaryClient:
+          type: boolean
+          description: Флаг зарплатного клиента
+          example: true
+
+    EmploymentDto:
+      type: object
+      description: Информация о занятости
+      required:
+        - employmentStatus
+        - employerINN
+        - salary
+        - position
+        - workExperienceTotal
+        - workExperienceCurrent
+      properties:
+        employmentStatus:
+          $ref: '#/components/schemas/EmploymentStatus'
+        employerINN:
+          type: string
+          description: ИНН работодателя
+          pattern: '^\d{10}$|^\d{12}$'
+          example: '7707083893'
+        salary:
+          type: number
+          format: decimal
+          description: Ежемесячный доход
+          example: 100000
+        position:
+          $ref: '#/components/schemas/Position'
+        workExperienceTotal:
+          type: integer
+          description: Общий стаж работы в месяцах
+          example: 60
+        workExperienceCurrent:
+          type: integer
+          description: Стаж на текущем месте работы в месяцах
+          example: 24
+
+    # Response DTOs
+    LoanOfferDto:
+      type: object
+      description: Кредитное предложение
+      required:
+        - statementId
+        - requestedAmount
+        - totalAmount
+        - term
+        - monthlyPayment
+        - rate
+        - isInsuranceEnabled
+        - isSalaryClient
+      properties:
+        statementId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор заявки
+          example: 123e4567-e89b-12d3-a456-426614174000
+        requestedAmount:
+          type: number
+          format: decimal
+          description: Запрошенная сумма кредита
+          example: 500000
+        totalAmount:
+          type: number
+          format: decimal
+          description: Итоговая сумма кредита (с учетом страховки)
+          example: 600000
+        term:
+          type: integer
+          description: Срок кредита в месяцах
+          example: 12
+        monthlyPayment:
+          type: number
+          format: decimal
+          description: Ежемесячный платеж
+          example: 45000
+        rate:
+          type: number
+          format: decimal
+          description: Процентная ставка
+          example: 12.5
+        isInsuranceEnabled:
+          type: boolean
+          description: Флаг подключения страховки
+          example: true
+        isSalaryClient:
+          type: boolean
+          description: Флаг зарплатного клиента
+          example: false
+
+    CreditDto:
+      type: object
+      description: Полный расчет кредита
+      required:
+        - amount
+        - term
+        - monthlyPayment
+        - rate
+        - psk
+        - isInsuranceEnabled
+        - isSalaryClient
+        - paymentSchedule
+      properties:
+        amount:
+          type: number
+          format: decimal
+          description: Сумма кредита
+          example: 500000
+        term:
+          type: integer
+          description: Срок кредита в месяцах
+          example: 12
+        monthlyPayment:
+          type: number
+          format: decimal
+          description: Ежемесячный платеж
+          example: 44500
+        rate:
+          type: number
+          format: decimal
+          description: Итоговая процентная ставка
+          example: 10.5
+        psk:
+          type: number
+          format: decimal
+          description: Полная стоимость кредита в процентах
+          example: 11.2
+        isInsuranceEnabled:
+          type: boolean
+          description: Флаг подключения страховки
+          example: true
+        isSalaryClient:
+          type: boolean
+          description: Флаг зарплатного клиента
+          example: true
+        paymentSchedule:
+          type: array
+          description: График ежемесячных платежей
+          items:
+            $ref: '#/components/schemas/PaymentScheduleElementDto'
+
+    PaymentScheduleElementDto:
+      type: object
+      description: Элемент графика платежей
+      required:
+        - number
+        - date
+        - totalPayment
+        - interestPayment
+        - debtPayment
+        - remainingDebt
+      properties:
+        number:
+          type: integer
+          description: Номер платежа по порядку
+          example: 1
+        date:
+          type: string
+          format: date
+          description: Дата платежа
+          example: 2024-02-01
+        totalPayment:
+          type: number
+          format: decimal
+          description: Общая сумма платежа
+          example: 44500
+        interestPayment:
+          type: number
+          format: decimal
+          description: Сумма процентов в платеже
+          example: 4375
+        debtPayment:
+          type: number
+          format: decimal
+          description: Сумма основного долга в платеже
+          example: 40125
+        remainingDebt:
+          type: number
+          format: decimal
+          description: Остаток долга после платежа
+          example: 459875
+
+    # Error Response
+    ErrorResponse:
+      type: object
+      description: Ответ с ошибкой
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Время возникновения ошибки
+          example: 2024-01-01T12:00:00
+        status:
+          type: integer
+          description: HTTP статус код
+          example: 400
+        error:
+          type: string
+          description: Тип ошибки
+          example: Bad Request
+        message:
+          type: string
+          description: Детальное сообщение об ошибке
+          example: "Age must be at least 18 years"
+        path:
+          type: string
+          description: Путь к эндпоинту
+          example: /calculator/offers
