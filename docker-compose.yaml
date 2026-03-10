@@ -122,34 +122,43 @@ services:
     networks:
       - neoflex-bank-credit-network
 
-#  grafana:
-#    image: grafana/grafana:10.3.1
-#    container_name: grafana
-#    ports:
-#      - "3000:3000"
-#    depends_on:
-#      prometheus:
-#        condition: service_healthy
-#      loki:
-#        condition: service_healthy
-#      tempo:
-#        condition: service_started
-#      alloy:
-#        condition: service_started
-#    environment:
-#      GF_AUTH_ANONYMOUS_ENABLED: true
-#      GF_SECURITY_ADMIN_USER: admin
-#      GF_SECURITY_ADMIN_PASSWORD: admin
-#      GF_METRICS_ENABLED: "true"
-#    volumes:
-#      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
-#      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
-#      - nexus-data:/nexus-data
-#    healthcheck:
-#      test: [ "CMD", "wget", "--spider", "http://localhost:3000/api/health" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 10
+  grafana:
+    image: grafana/grafana:10.3.1
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_started
+      alloy:
+        condition: service_started
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      # Включаем метрики Grafana
+      GF_METRICS_ENABLED: "true"
+      GF_METRICS_BASIC_AUTH_USERNAME: admin
+      GF_METRICS_BASIC_AUTH_PASSWORD: admin
+      # Включаем логирование
+      GF_LOG_LEVEL: info
+      # Настройка доп. возможностей
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
+      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
+      - nexus-data:/nexus-data
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - neoflex-bank-credit-network
 
 
 volumes:
@@ -160,6 +169,7 @@ volumes:
   loki_chunks:
   loki_index:
   loki_rules:
+  grafana-data:
 
 networks:
   neoflex-bank-credit-network:
