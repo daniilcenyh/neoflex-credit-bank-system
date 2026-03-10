@@ -23,12 +23,13 @@ management:
       probability: 1.0
 
 credit:
-  base-rate: 15.0
-  insurance-cost: 100000
+  base-rate: ${BASE_RATE:15.0}
+  insurance-cost: ${INSURANCE_COST}100000
   insurance-rate-discount: 3.0
   salary-rate-discount: 1.0
   min-amount: 20000
   min-term: 6
+  min-age: 18
 
 otel:
   exporter:
