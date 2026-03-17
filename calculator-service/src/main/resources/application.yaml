@@ -5,6 +5,22 @@ spring:
   application:
     name: calculator-service
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+    display-request-duration: true
+  packages-to-scan:
+    - com.neoflex.calculator_service.rest
+    - net.proselyte.calculator.api
+  paths-to-match: /api/v1/**
+
 management:
   endpoints:
     web:

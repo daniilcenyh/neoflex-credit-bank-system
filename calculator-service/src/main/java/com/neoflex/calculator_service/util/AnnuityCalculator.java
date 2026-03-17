@@ -24,6 +24,14 @@ public class AnnuityCalculator {
     public BigDecimal calculateMonthlyPayment(BigDecimal principal,
                                               BigDecimal annualRate,
                                               int termMonths) {
+        // Проверка на нулевую ставку
+        if (annualRate.compareTo(BigDecimal.ZERO) == 0) {
+            BigDecimal payment = principal
+                    .divide(BigDecimal.valueOf(termMonths), MONEY_SCALE, MONEY_ROUNDING);
+            log.debug("Zero rate detected. Monthly payment = principal/term = {}", payment);
+            return payment;
+        }
+
         BigDecimal monthlyRate = toMonthlyRate(annualRate);
         log.debug("calculateMonthlyPayment: principal={}, annualRate={}, term={}, monthlyRate={}",
                 principal, annualRate, termMonths, monthlyRate);
@@ -103,9 +111,23 @@ public class AnnuityCalculator {
     public BigDecimal calculatePsk(BigDecimal principal,
                                    BigDecimal monthlyPayment,
                                    int termMonths) {
+        if (principal == null || monthlyPayment == null) {
+            throw new IllegalArgumentException("Parameters cannot be null");
+        }
+        if (principal.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Principal must be positive");
+        }
+        if (termMonths <= 0) {
+            throw new IllegalArgumentException("Term must be positive");
+        }
+
         BigDecimal totalPaid = monthlyPayment.multiply(BigDecimal.valueOf(termMonths), MC);
         BigDecimal termYears = BigDecimal.valueOf(termMonths)
                 .divide(BigDecimal.valueOf(12), MC);
+
+        if (totalPaid.compareTo(principal) == 0) {
+            return BigDecimal.ZERO.setScale(MONEY_SCALE);
+        }
 
         BigDecimal psk = totalPaid
                 .subtract(principal)
@@ -120,6 +142,9 @@ public class AnnuityCalculator {
 
     // Конвертирует годовую ставку (%) в месячную долю: rate / 12 / 100.
     private BigDecimal toMonthlyRate(BigDecimal annualRate) {
+        if (annualRate == null) {
+            throw new IllegalArgumentException("Annual rate cannot be null");
+        }
         return annualRate.divide(BigDecimal.valueOf(12 * 100), MC);
     }
 }

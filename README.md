@@ -89,15 +89,16 @@ docker-compose ps
 
 После запуска становятся доступны следующие сервисы:
 
-| Сервис | URL | Доступ | Назначение |
-|--------|-----|--------|------------|
-| **Calculator API** | http://localhost:8092 | - | Основной микросервис |
-| **Nexus** | http://localhost:8081 | admin/admin | Хранилище артефактов |
-| **Prometheus** | http://localhost:9090 | - | Сбор метрик |
-| **Grafana** | http://localhost:3000 | admin/admin | Визуализация |
-| **Loki** | http://localhost:3100 | - | Хранение логов |
-| **Tempo** | http://localhost:3200 | - | Хранение трейсов |
-| **Alloy** | http://localhost:9080 | - | Сбор телеметрии |
+| Сервис             | URL | Доступ | Назначение                          |
+|--------------------|-----|--------|-------------------------------------|
+| **Calculator API** | http://localhost:8092 | - | Основной микросервис                |
+| **Nexus**          | http://localhost:8081 | admin/admin | Хранилище артефактов                |
+| **Prometheus**     | http://localhost:9090 | - | Сбор метрик                         |
+| **Grafana**        | http://localhost:3000 | admin/admin | Визуализация                        |
+| **Loki**           | http://localhost:3100 | - | Хранение логов                      |
+| **Tempo**          | http://localhost:3200 | - | Хранение трейсов                    |
+| **Alloy**          | http://localhost:9080 | - | Сбор телеметрии                     |
+| **Swagger UI**      | http://localhost:8092/swagger-ui.html | - | Документация сервиса calculator-api |
 
 ## API методы
 
