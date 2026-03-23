@@ -1,7 +1,6 @@
 package com.neoflex.calculator_service.rest;
 
 import com.neoflex.calculator_service.service.CalculatorService;
-import com.neoflex.calculator_service.service.PrescoringService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.proselyte.calculator.api.CreditCalculatorApi;

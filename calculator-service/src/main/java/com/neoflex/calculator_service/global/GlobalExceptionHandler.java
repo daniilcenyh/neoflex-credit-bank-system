@@ -11,7 +11,6 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.servlet.View;
 
 import java.time.OffsetDateTime;
 import java.util.HashMap;
@@ -21,8 +20,6 @@ import java.util.Map;
 @ControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
-
-    private final View view;
 
     private ErrorResponse buildErrorResponse(String message, int status, String errorType, OffsetDateTime timestamp) {
         return new ErrorResponse(
@@ -46,7 +43,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ScoringException.class)
     public ResponseEntity<ErrorResponse> handleScoringException(ScoringException e) {
-        log.error("Ошибка скоринга: {}", e.getMessage());
         log.error("Ошибка скоринга: {}", e.getMessage());
         var timestamp = OffsetDateTime.now();
         int status = HttpStatus.BAD_REQUEST.value();
@@ -83,7 +79,7 @@ public class GlobalExceptionHandler {
         int status = HttpStatus.INTERNAL_SERVER_ERROR.value();
         String errorType = "Внутренняя ошибка сервера";
         String message = e.getMessage();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(buildErrorResponse(message, status, errorType, timestamp));
     }
 

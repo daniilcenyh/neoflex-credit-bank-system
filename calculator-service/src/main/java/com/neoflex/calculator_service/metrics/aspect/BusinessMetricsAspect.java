@@ -115,18 +115,15 @@ public class BusinessMetricsAspect {
     }
 
     private String buildTimerKey(
-            String metricName,    // "orders.created"
-            String className,     // "OrderService"
-            String[] customTags,  // ["type=write", "priority=high"]
-            String status         // "success" или "error"
+            String metricName,
+            String className,
+            String[] customTags,
+            String status
     ) {
-        // StringBuilder: эффективная конкатенация строк.
         StringBuilder key = new StringBuilder();
 
-        // Добавляем имя метрики и класс.
         key.append(metricName).append('.').append(className);
 
-        // Если есть кастомные теги — добавляем в ключ.
         if (customTags != null && customTags.length > 0) {
             String[] sorted = customTags.clone();
 

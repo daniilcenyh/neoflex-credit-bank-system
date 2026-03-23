@@ -1,8 +1,11 @@
 package com.neoflex.calculator_service.validator;
 
 import com.neoflex.calculator_service.exception.PrescoringException;
+import com.neoflex.calculator_service.exception.ScoringException;
 import lombok.extern.slf4j.Slf4j;
+import net.proselyte.calculator.dto.EmploymentStatus;
 import net.proselyte.calculator.dto.LoanStatementRequestDto;
+import net.proselyte.calculator.dto.ScoringDataDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -29,7 +32,6 @@ public class LoanRequestValidator {
     private static final Pattern PASSPORT_SERIES_PATTERN = Pattern.compile("^\\d{4}$");
     private static final Pattern PASSPORT_NUMBER_PATTERN = Pattern.compile("^\\d{6}$");
 
-    // Валидирование данных согласно ТЗ
     public void validate(LoanStatementRequestDto request) {
         log.debug("Прескоринг заявки: amount={}, term={}, birthdate={}",
                 request.getAmount(), request.getTerm(), request.getBirthdate());
@@ -58,7 +60,6 @@ public class LoanRequestValidator {
         log.debug("Прескоринг пройден успешно");
     }
 
-    // Проверки
 
     private void checkPassportSeria(String value, List<String> violations) {
         if (value == null || value.isBlank()) return;
@@ -114,5 +115,45 @@ public class LoanRequestValidator {
             violations.add("Поле '%s' должно содержать только латинские буквы (2–30 символов), получено: '%s'"
                     .formatted(field, value));
         }
+    }
+
+    public void performHardChecks(ScoringDataDto data) {
+        log.debug("Выполнение жестких проверок");
+
+        int age = calculateAge(data.getBirthdate());
+        if (age < 20 || age > 65) {
+            throw new ScoringException(
+                    String.format("Возраст %d лет не подходит (требуется 20-65 лет)", age));
+        }
+
+        if (data.getEmployment().getEmploymentStatus() == EmploymentStatus.UNEMPLOYED) {
+            throw new ScoringException("Безработные клиенты не рассматриваются");
+        }
+
+        if (data.getEmployment().getWorkExperienceTotal() < 18) {
+            throw new ScoringException(
+                    String.format("Общий стаж %d мес. меньше требуемых 18 мес.",
+                            data.getEmployment().getWorkExperienceTotal()));
+        }
+
+        if (data.getEmployment().getWorkExperienceCurrent() < 3) {
+            throw new ScoringException(
+                    String.format("Текущий стаж %d мес. меньше требуемых 3 мес.",
+                            data.getEmployment().getWorkExperienceCurrent()));
+        }
+
+        BigDecimal maxPossibleAmount = data.getEmployment().getSalary()
+                .multiply(BigDecimal.valueOf(24));
+        if (data.getAmount().compareTo(maxPossibleAmount) > 0) {
+            throw new ScoringException(
+                    String.format("Сумма кредита %s превышает 24 зарплаты (%s)",
+                            data.getAmount(), maxPossibleAmount));
+        }
+
+        log.debug("Жесткие проверки пройдены успешно");
+    }
+
+    private int calculateAge(LocalDate birthdate) {
+        return Period.between(birthdate, LocalDate.now()).getYears();
     }
 }

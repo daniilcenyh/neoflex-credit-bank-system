@@ -16,15 +16,12 @@ import java.util.List;
 public class AnnuityCalculator {
     private static final MathContext MC = new MathContext(20, RoundingMode.HALF_UP);
 
-    // Масштаб для финальных денежных значений.
     private static final int MONEY_SCALE = 2;
     private static final RoundingMode MONEY_ROUNDING = RoundingMode.HALF_UP;
 
-    // Рассчитывает ежемесячный платеж по кредитной ставке пользователя
     public BigDecimal calculateMonthlyPayment(BigDecimal principal,
                                               BigDecimal annualRate,
                                               int termMonths) {
-        // Проверка на нулевую ставку
         if (annualRate.compareTo(BigDecimal.ZERO) == 0) {
             BigDecimal payment = principal
                     .divide(BigDecimal.valueOf(termMonths), MONEY_SCALE, MONEY_ROUNDING);
@@ -36,13 +33,10 @@ public class AnnuityCalculator {
         log.debug("calculateMonthlyPayment: principal={}, annualRate={}, term={}, monthlyRate={}",
                 principal, annualRate, termMonths, monthlyRate);
 
-        // (1 + r)^n
         BigDecimal onePlusRPowN = BigDecimal.ONE.add(monthlyRate, MC).pow(termMonths, MC);
 
-        // r × (1+r)^n
         BigDecimal numerator = monthlyRate.multiply(onePlusRPowN, MC);
 
-        // (1+r)^n − 1
         BigDecimal denominator = onePlusRPowN.subtract(BigDecimal.ONE, MC);
 
         BigDecimal payment = principal
@@ -53,7 +47,6 @@ public class AnnuityCalculator {
         return payment;
     }
 
-    // Рассчитывает план платежей
     public List<PaymentScheduleElementDto> buildPaymentSchedule(BigDecimal principal,
                                                                 BigDecimal annualRate,
                                                                 int termMonths,
@@ -65,7 +58,6 @@ public class AnnuityCalculator {
         BigDecimal remainingDebt = principal.setScale(MONEY_SCALE, MONEY_ROUNDING);
 
         for (int i = 1; i <= termMonths; i++) {
-            // Проценты за текущий месяц: остаток × месячная ставка
             BigDecimal interestPayment = remainingDebt
                     .multiply(monthlyRate, MC)
                     .setScale(MONEY_SCALE, MONEY_ROUNDING);
@@ -74,7 +66,6 @@ public class AnnuityCalculator {
             BigDecimal totalPayment;
 
             if (i == termMonths) {
-                // Последний платёж: гасим всё, что осталось (устраняет накопленную погрешность)
                 debtPayment = remainingDebt;
                 totalPayment = debtPayment.add(interestPayment);
             } else {
@@ -86,7 +77,6 @@ public class AnnuityCalculator {
                     .subtract(debtPayment)
                     .setScale(MONEY_SCALE, MONEY_ROUNDING);
 
-            // Защита от отрицательного остатка из-за округлений
             if (remainingDebt.compareTo(BigDecimal.ZERO) < 0) {
                 remainingDebt = BigDecimal.ZERO;
             }
@@ -107,7 +97,6 @@ public class AnnuityCalculator {
         return List.copyOf(schedule);
     }
 
-    // Рассчитывает Полную Стоимость Кредита (ПСК) в % годовых.
     public BigDecimal calculatePsk(BigDecimal principal,
                                    BigDecimal monthlyPayment,
                                    int termMonths) {
@@ -140,7 +129,6 @@ public class AnnuityCalculator {
         return psk;
     }
 
-    // Конвертирует годовую ставку (%) в месячную долю: rate / 12 / 100.
     private BigDecimal toMonthlyRate(BigDecimal annualRate) {
         if (annualRate == null) {
             throw new IllegalArgumentException("Annual rate cannot be null");

@@ -1,5 +1,6 @@
-package com.neoflex.calculator_service.service.impl;
+package com.neoflex.calculator_service.service;
 
+import com.neoflex.calculator_service.service.PrescoringService;
 import com.neoflex.calculator_service.validator.LoanRequestValidator;
 import jakarta.xml.bind.ValidationException;
 import net.proselyte.calculator.dto.LoanOfferDto;
@@ -10,11 +11,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -27,13 +26,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-public class PrescoringServiceImplTest {
+public class PrescoringServiceTest {
 
     @Mock
     private LoanRequestValidator validator;
 
     @InjectMocks
-    private PrescoringServiceImpl prescoringService;
+    private PrescoringService prescoringService;
 
     private LoanStatementRequestDto validRequest;
 
