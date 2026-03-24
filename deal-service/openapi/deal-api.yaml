@@ -1,20 +1,20 @@
 openapi: 3.0.0
 info:
-  title: Calculator API
-  description: REST API для расчета кредитных предложений и скоринга клиентов
+  title: Deal API
+  description: REST API для управления кредитными заявками
   version: 1.0.0
 servers:
-  - url: http://localhost:8092
+  - url: http://localhost:8093
     description: Local development server
 
 paths:
-  /api/v1/calculator/offers:
+  /deal/statement:
     post:
       summary: Расчёт возможных условий кредита
-      description: На основе базовых данных клиента генерирует 4 кредитных предложения с разными комбинациями услуг (страховка/зарплатный клиент)
-      operationId: calculateOffers
+      description: Создает заявку и получает 4 кредитных предложения от калькулятора
+      operationId: calculateStatement
       tags:
-        - Credit Calculator
+        - Deal Controller
       requestBody:
         required: true
         content:
@@ -31,7 +31,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/LoanOfferDto'
         '400':
-          description: Ошибка валидации (прескоринг не пройден)
+          description: Ошибка валидации
           content:
             application/json:
               schema:
@@ -39,32 +39,65 @@ paths:
         '500':
           description: Внутренняя ошибка сервера
 
-  /api/v1/calculator/calc:
+  /deal/offer/select:
     post:
-      summary: Полный расчет параметров кредита
-      description: Валидация данных, скоринг клиента и расчет всех параметров кредита с графиком платежей
-      operationId: calculateCredit
+      summary: Выбор одного из предложений
+      description: Выбирает одно из 4х кредитных предложений и обновляет статус заявки
+      operationId: selectOffer
       tags:
-        - Credit Calculator
+        - Deal Controller
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ScoringDataDto'
+              $ref: '#/components/schemas/LoanOfferDto'
       responses:
         '200':
-          description: Успешный расчет кредита
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreditDto'
+          description: Предложение успешно выбрано
         '400':
-          description: Ошибка валидации или отказ в кредите по условиям скоринга
+          description: Ошибка валидации
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Заявка не найдена
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /deal/calculate/{statementId}:
+    post:
+      summary: Завершение регистрации и полный расчёт кредита
+      description: Завершает регистрацию клиента, отправляет данные на скоринг и сохраняет кредит
+      operationId: calculateCredit
+      tags:
+        - Deal Controller
+      parameters:
+        - name: statementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID заявки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinishRegistrationRequestDto'
+      responses:
+        '200':
+          description: Кредит успешно рассчитан
+        '400':
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Заявка не найдена
         '500':
           description: Внутренняя ошибка сервера
 
@@ -73,22 +106,22 @@ components:
     # Enums
     Gender:
       type: string
-      enum: [MALE, FEMALE, NON_BINARY]
+      enum: [ MALE, FEMALE, NON_BINARY ]
       description: Пол клиента
 
     MaritalStatus:
       type: string
-      enum: [MARRIED, DIVORCED, SINGLE, WIDOW_WIDOWER]
+      enum: [ MARRIED, DIVORCED, SINGLE, WIDOW_WIDOWER ]
       description: Семейное положение
 
     EmploymentStatus:
       type: string
-      enum: [EMPLOYED, SELF_EMPLOYED, BUSINESS_OWNER, UNEMPLOYED]
+      enum: [ EMPLOYED, SELF_EMPLOYED, BUSINESS_OWNER, UNEMPLOYED ]
       description: Статус занятости
 
     Position:
       type: string
-      enum: [# Государственная служба и бюджетная сфера
+      enum: [ # Государственная служба и бюджетная сфера
         CIVIL_SERVANT,           # Госслужащий
         MILITARY,                 # Военнослужащий
         TEACHER,                  # Учитель/Педагог
@@ -128,6 +161,48 @@ components:
         UNEMPLOYED                # Безработный
       ]
       description: Должность
+
+    ApplicationStatus:
+      type: string
+      enum: [
+        PREAPPROVAL,
+        APPROVED,
+        CC_DENIED,
+        CC_APPROVED,
+        PREPARE_DOCUMENTS,
+        DOCUMENT_CREATED,
+        CLIENT_DENIED,
+        DOCUMENT_SIGNED,
+        CREDIT_ISSUED
+      ]
+
+    CreditStatus:
+      type: string
+      enum: [
+        CALCULATED,
+        ISSUED
+      ]
+
+    ChangeType:
+      type: string
+      enum: [
+        AUTOMATIC,
+        MANUAL
+      ]
+
+#    StatusHistory:
+#      type: string
+#      enum: [
+#        PREAPPROVAL,
+#        APPROVED,
+#        CC_DENIED,
+#        CC_APPROVED,
+#        PREPARE_DOCUMENTS,
+#        DOCUMENT_CREATED,
+#        CLIENT_DENIED,
+#        DOCUMENT_SIGNED,
+#        CREDIT_ISSUED
+#      ]
 
     # Request DTOs
     LoanStatementRequestDto:
@@ -190,6 +265,166 @@ components:
           description: Номер паспорта (6 цифр)
           pattern: '^\d{6}$'
           example: '123456'
+
+    EmploymentDto:
+      type: object
+      description: Информация о занятости
+      required:
+        - employmentStatus
+        - employerINN
+        - salary
+        - position
+        - workExperienceTotal
+        - workExperienceCurrent
+      properties:
+        employmentStatus:
+          $ref: '#/components/schemas/EmploymentStatus'
+        employerINN:
+          type: string
+          description: ИНН работодателя
+          pattern: '^\d{10}$|^\d{12}$'
+          example: '7707083893'
+        salary:
+          type: number
+          format: decimal
+          description: Ежемесячный доход
+          example: 100000
+        position:
+          $ref: '#/components/schemas/Position'
+        workExperienceTotal:
+          type: integer
+          description: Общий стаж работы в месяцах
+          example: 60
+        workExperienceCurrent:
+          type: integer
+          description: Стаж на текущем месте работы в месяцах
+          example: 24
+
+    FinishRegistrationRequestDto:
+      type: object
+      description: Запрос на завершение регистрации и расчета кредита
+      required:
+        - gender
+        - maritalStatus
+        - dependentAmount
+        - passportIssueDate
+        - passportIssueBranch
+        - employment
+        - accountNumber
+      properties:
+        gender:
+          $ref: '#/components/schemas/Gender'
+        maritalStatus:
+          $ref: '#/components/schemas/MaritalStatus'
+        dependentAmount:
+          type: integer
+          description: Количество иждивенцев
+          minimum: 0
+          example: 2
+        passportIssueDate:
+          type: string
+          format: date
+          description: Дата выдачи паспорта
+          example: 2010-01-01
+        passportIssueBranch:
+          type: string
+          description: Кем выдан паспорт
+          example: Отделение УФМС России по г. Москва
+        employment:
+          $ref: '#/components/schemas/EmploymentDto'
+        accountNumber:
+          type: string
+          description: Номер банковского счета
+          example: '40817810000000000001'
+
+#    StatementStatusHistoryDto:
+#      type: object
+#      description:
+#      required:
+#        - status
+#        - timestamp
+#        - changeType
+#      properties:
+#        status:
+#          $ref: '#/components/schemas/StatusHistory'
+#        timestamp:
+#          type: string
+#          format: date-time
+#        changeType:
+#          $ref: '#/components/schemas/ChangeType'
+
+#    Passport:
+#      type: object
+#      description: Информация о паспорте пользователя
+#      required:
+#        - passport
+#        - series
+#        - number
+#        - issueBranch
+#        - issueDate
+#      properties:
+#        passport:
+#          type: string
+#          format: uuid
+#          description: Уникальный идентификатор
+#          example: 123e4567-e89b-12d3-a456-426614174000
+#        series:
+#          type: string
+#          description: Серия паспорта
+#          example: '1234'
+#        number:
+#          type: string
+#          description: Номер паспорта
+#          example: '123456'
+#        issueBranch:
+#          type: string
+#          description: Кем выдан паспорт
+#          example: Отделение УФМС России по г. Москва
+#        issueDate:
+#          type: string
+#          format: date
+#          description: Дата выдачи паспорта
+#          example: 2010-01-01
+
+#    Employment:
+#      type: object
+#      description: Информация о работе пользователя
+#      required:
+#        - employment
+#        - status
+#        - employerInn
+#        - salary
+#        - position
+#        - workExperience
+#        - workExperienceCurrent
+#      properties:
+#        employment:
+#          type: string
+#          format: uuid
+#          description: Уникальный идентификатор
+#          example: 123e4567-e89b-12d3-a456-426614174000
+#        status:
+#          $ref: '#/components/schemas/EmploymentStatus'
+#        employerInn:
+#          type: string
+#          description: ИНН работодателя
+#          pattern: '^\d{10}$|^\d{12}$'
+#          example: '7707083893'
+#        salary:
+#          type: number
+#          format: decimal
+#          description: Ежемесячный доход
+#          example: 100000
+#        position:
+#          $ref: '#/components/schemas/Position'
+#        workExperience:
+#          type: integer
+#          description: Общий стаж работы в месяцах
+#          example: 60
+#        workExperienceCurrent:
+#          type: integer
+#          description: Стаж на текущем месте работы в месяцах
+#          example: 24
 
     ScoringDataDto:
       type: object
@@ -278,92 +513,6 @@ components:
           type: boolean
           description: Флаг зарплатного клиента
           example: true
-
-    EmploymentDto:
-      type: object
-      description: Информация о занятости
-      required:
-        - employmentStatus
-        - employerINN
-        - salary
-        - position
-        - workExperienceTotal
-        - workExperienceCurrent
-      properties:
-        employmentStatus:
-          $ref: '#/components/schemas/EmploymentStatus'
-        employerINN:
-          type: string
-          description: ИНН работодателя
-          pattern: '^\d{10}$|^\d{12}$'
-          example: '7707083893'
-        salary:
-          type: number
-          format: decimal
-          description: Ежемесячный доход
-          example: 100000
-        position:
-          $ref: '#/components/schemas/Position'
-        workExperienceTotal:
-          type: integer
-          description: Общий стаж работы в месяцах
-          example: 60
-        workExperienceCurrent:
-          type: integer
-          description: Стаж на текущем месте работы в месяцах
-          example: 24
-
-    # Response DTOs
-    LoanOfferDto:
-      type: object
-      description: Кредитное предложение
-      required:
-        - statementId
-        - requestedAmount
-        - totalAmount
-        - term
-        - monthlyPayment
-        - rate
-        - isInsuranceEnabled
-        - isSalaryClient
-      properties:
-        statementId:
-          type: string
-          format: uuid
-          description: Уникальный идентификатор заявки
-          example: 123e4567-e89b-12d3-a456-426614174000
-        requestedAmount:
-          type: number
-          format: decimal
-          description: Запрошенная сумма кредита
-          example: 500000
-        totalAmount:
-          type: number
-          format: decimal
-          description: Итоговая сумма кредита (с учетом страховки)
-          example: 600000
-        term:
-          type: integer
-          description: Срок кредита в месяцах
-          example: 12
-        monthlyPayment:
-          type: number
-          format: decimal
-          description: Ежемесячный платеж
-          example: 45000
-        rate:
-          type: number
-          format: decimal
-          description: Процентная ставка
-          example: 12.5
-        isInsuranceEnabled:
-          type: boolean
-          description: Флаг подключения страховки
-          example: true
-        isSalaryClient:
-          type: boolean
-          description: Флаг зарплатного клиента
-          example: false
 
     CreditDto:
       type: object
@@ -456,6 +605,59 @@ components:
           format: decimal
           description: Остаток долга после платежа
           example: 459875
+
+
+    # Response DTOs
+    LoanOfferDto:
+      type: object
+      description: Кредитное предложение
+      required:
+        - statementId
+        - requestedAmount
+        - totalAmount
+        - term
+        - monthlyPayment
+        - rate
+        - isInsuranceEnabled
+        - isSalaryClient
+      properties:
+        statementId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор заявки
+          example: 123e4567-e89b-12d3-a456-426614174000
+        requestedAmount:
+          type: number
+          format: decimal
+          description: Запрошенная сумма кредита
+          example: 500000
+        totalAmount:
+          type: number
+          format: decimal
+          description: Итоговая сумма кредита (с учетом страховки)
+          example: 600000
+        term:
+          type: integer
+          description: Срок кредита в месяцах
+          example: 12
+        monthlyPayment:
+          type: number
+          format: decimal
+          description: Ежемесячный платеж
+          example: 45000
+        rate:
+          type: number
+          format: decimal
+          description: Процентная ставка
+          example: 12.5
+        isInsuranceEnabled:
+          type: boolean
+          description: Флаг подключения страховки
+          example: true
+        isSalaryClient:
+          type: boolean
+          description: Флаг зарплатного клиента
+          example: false
 
     # Error Response
     ErrorResponse:

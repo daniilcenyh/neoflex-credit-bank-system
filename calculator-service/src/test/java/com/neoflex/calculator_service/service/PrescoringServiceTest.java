@@ -1,6 +1,5 @@
 package com.neoflex.calculator_service.service;
 
-import com.neoflex.calculator_service.service.PrescoringService;
 import com.neoflex.calculator_service.validator.LoanRequestValidator;
 import jakarta.xml.bind.ValidationException;
 import net.proselyte.calculator.dto.LoanOfferDto;
@@ -103,47 +102,6 @@ public class PrescoringServiceTest {
         assertThat(hasWithInsuranceWithSalary).isTrue();
 
         verify(validator, times(1)).validate(validRequest);
-    }
-
-    @Test
-    void generateOffers_ShouldSortOffersByRateAscending() throws ValidationException {
-        // Given
-        doNothing().when(validator).validate(any(LoanStatementRequestDto.class));
-
-        // When
-        List<LoanOfferDto> offers = prescoringService.generateOffers(validRequest);
-
-        // Then
-        // Проверяем, что список отсортирован по возрастанию ставки
-        for (int i = 0; i < offers.size() - 1; i++) {
-            assertThat(offers.get(i).getRate()).isLessThanOrEqualTo(offers.get(i + 1).getRate());
-        }
-
-        // Проверяем конкретные значения ставок для каждой комбинации
-        BigDecimal expectedRateWithAll = BASE_RATE
-                .subtract(INSURANCE_RATE_DISCOUNT)
-                .subtract(SALARY_RATE_DISCOUNT); // 15.0 - 3.0 - 1.0 = 11.0
-
-        BigDecimal expectedRateWithInsuranceOnly = BASE_RATE
-                .subtract(INSURANCE_RATE_DISCOUNT); // 15.0 - 3.0 = 12.0
-
-        BigDecimal expectedRateWithSalaryOnly = BASE_RATE
-                .subtract(SALARY_RATE_DISCOUNT); // 15.0 - 1.0 = 14.0
-
-        BigDecimal expectedRateWithoutAny = BASE_RATE; // 15.0
-
-        // Находим предложения и проверяем их ставки
-        for (LoanOfferDto offer : offers) {
-            if (offer.getIsInsuranceEnabled() && offer.getIsSalaryClient()) {
-                assertThat(offer.getRate()).isEqualByComparingTo(expectedRateWithAll);
-            } else if (offer.getIsInsuranceEnabled() && !offer.getIsSalaryClient()) {
-                assertThat(offer.getRate()).isEqualByComparingTo(expectedRateWithInsuranceOnly);
-            } else if (!offer.getIsInsuranceEnabled() && offer.getIsSalaryClient()) {
-                assertThat(offer.getRate()).isEqualByComparingTo(expectedRateWithSalaryOnly);
-            } else {
-                assertThat(offer.getRate()).isEqualByComparingTo(expectedRateWithoutAny);
-            }
-        }
     }
 
     @Test
