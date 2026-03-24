@@ -2,7 +2,7 @@ package com.neoflex.calculator_service.service;
 
 
 import com.neoflex.calculator_service.exception.ScoringException;
-import com.neoflex.calculator_service.service.ScoringService;
+import com.neoflex.calculator_service.validator.LoanRequestValidator;
 import net.proselyte.calculator.dto.CreditDto;
 import net.proselyte.calculator.dto.EmploymentDto;
 import net.proselyte.calculator.dto.EmploymentStatus;
@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -22,12 +23,17 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ScoringServiceTest {
 
+    @Mock
+    private LoanRequestValidator validator;
     @InjectMocks
     private ScoringService scoringService;
+
 
     private ScoringDataDto validData;
     private EmploymentDto validEmployment;
@@ -35,12 +41,14 @@ class ScoringServiceTest {
     private final BigDecimal BASE_RATE = new BigDecimal("15.0");
     private final BigDecimal INSURANCE_RATE_DISCOUNT = new BigDecimal("3.0");
     private final BigDecimal SALARY_RATE_DISCOUNT = new BigDecimal("1.0");
+    private final BigDecimal INSURANCE_COST = new BigDecimal("100000");
 
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(scoringService, "BASE_RATE", BASE_RATE);
         ReflectionTestUtils.setField(scoringService, "INSURANCE_RATE_DISCOUNT", INSURANCE_RATE_DISCOUNT);
         ReflectionTestUtils.setField(scoringService, "SALARY_RATE_DISCOUNT", SALARY_RATE_DISCOUNT);
+        ReflectionTestUtils.setField(scoringService, "INSURANCE_COST", INSURANCE_COST);
 
         validEmployment = new EmploymentDto(
                 EmploymentStatus.EMPLOYED,
@@ -167,72 +175,76 @@ class ScoringServiceTest {
     @Test
     void calculateCredit_WithAgeBelow20_ShouldThrowException() {
         // Given
-        validData.setBirthdate(LocalDate.now().minusYears(19));
+        LocalDate birthdate = LocalDate.now().minusYears(19);
+        doThrow(new ScoringException("Возраст 19 лет не подходит (требуется 20-65 лет)"))
+                .when(validator).performHardChecks(any(ScoringDataDto.class));
 
         // When & Then
         assertThatThrownBy(() -> scoringService.calculateCredit(validData))
                 .isInstanceOf(ScoringException.class)
-                .hasMessageContaining("Возраст 19 лет не подходит");
+                .hasMessageContaining("Возраст");
+
+        verify(validator, times(1)).performHardChecks(validData);
     }
 
     @Test
     void calculateCredit_WithAgeAbove65_ShouldThrowException() {
         // Given
-        validData.setBirthdate(LocalDate.now().minusYears(66));
+        doThrow(new ScoringException("Возраст 66 лет не подходит (требуется 20-65 лет)"))
+                .when(validator).performHardChecks(any(ScoringDataDto.class));
 
         // When & Then
         assertThatThrownBy(() -> scoringService.calculateCredit(validData))
                 .isInstanceOf(ScoringException.class)
-                .hasMessageContaining("Возраст 66 лет не подходит");
+                .hasMessageContaining("Возраст");
     }
 
     @Test
     void calculateCredit_WithUnemployed_ShouldThrowException() {
         // Given
-        validEmployment.setEmploymentStatus(EmploymentStatus.UNEMPLOYED);
-        validData.setEmployment(validEmployment);
+        doThrow(new ScoringException("Безработные клиенты не рассматриваются"))
+                .when(validator).performHardChecks(any(ScoringDataDto.class));
 
         // When & Then
         assertThatThrownBy(() -> scoringService.calculateCredit(validData))
                 .isInstanceOf(ScoringException.class)
-                .hasMessageContaining("Безработные клиенты не рассматриваются");
+                .hasMessageContaining("Безработные");
     }
 
     @Test
     void calculateCredit_WithTotalExperienceLessThan18Months_ShouldThrowException() {
         // Given
-        validEmployment.setWorkExperienceTotal(12);
-        validData.setEmployment(validEmployment);
+        doThrow(new ScoringException("Общий стаж 12 мес. меньше требуемых 18 мес."))
+                .when(validator).performHardChecks(any(ScoringDataDto.class));
 
         // When & Then
         assertThatThrownBy(() -> scoringService.calculateCredit(validData))
                 .isInstanceOf(ScoringException.class)
-                .hasMessageContaining("Общий стаж 12 мес. меньше требуемых 18 мес");
+                .hasMessageContaining("Общий стаж");
     }
 
     @Test
     void calculateCredit_WithCurrentExperienceLessThan3Months_ShouldThrowException() {
         // Given
-        validEmployment.setWorkExperienceCurrent(2);
-        validData.setEmployment(validEmployment);
+        doThrow(new ScoringException("Текущий стаж 2 мес. меньше требуемых 3 мес."))
+                .when(validator).performHardChecks(any(ScoringDataDto.class));
 
         // When & Then
         assertThatThrownBy(() -> scoringService.calculateCredit(validData))
                 .isInstanceOf(ScoringException.class)
-                .hasMessageContaining("Текущий стаж 2 мес. меньше требуемых 3 мес");
+                .hasMessageContaining("Текущий стаж");
     }
 
     @Test
     void calculateCredit_WithAmountExceeding24Salaries_ShouldThrowException() {
         // Given
-        validData.setAmount(new BigDecimal("2500000")); // 25 * 100000 > 24 * 100000
-        validEmployment.setSalary(new BigDecimal("100000"));
-        validData.setEmployment(validEmployment);
+        doThrow(new ScoringException("Сумма кредита превышает 24 зарплаты"))
+                .when(validator).performHardChecks(any(ScoringDataDto.class));
 
         // When & Then
         assertThatThrownBy(() -> scoringService.calculateCredit(validData))
                 .isInstanceOf(ScoringException.class)
-                .hasMessageContaining("превышает 24 зарплаты");
+                .hasMessageContaining("превышает");
     }
 
     // ТЕСТЫ ПРАВИЛ СКОРИНГА
