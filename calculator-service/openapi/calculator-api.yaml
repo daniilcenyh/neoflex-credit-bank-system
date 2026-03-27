@@ -4,11 +4,11 @@ info:
   description: REST API для расчета кредитных предложений и скоринга клиентов
   version: 1.0.0
 servers:
-  - url: http://localhost:8080
+  - url: http://localhost:8092
     description: Local development server
 
 paths:
-  /calculator/offers:
+  /api/v1/calculator/offers:
     post:
       summary: Расчёт возможных условий кредита
       description: На основе базовых данных клиента генерирует 4 кредитных предложения с разными комбинациями услуг (страховка/зарплатный клиент)
@@ -39,7 +39,7 @@ paths:
         '500':
           description: Внутренняя ошибка сервера
 
-  /calculator/calc:
+  /api/v1/calculator/calc:
     post:
       summary: Полный расчет параметров кредита
       description: Валидация данных, скоринг клиента и расчет всех параметров кредита с графиком платежей
@@ -461,6 +461,11 @@ components:
     ErrorResponse:
       type: object
       description: Ответ с ошибкой
+      required:
+        - timestamp
+        - status
+        - error
+        - message
       properties:
         timestamp:
           type: string
@@ -479,7 +484,3 @@ components:
           type: string
           description: Детальное сообщение об ошибке
           example: "Age must be at least 18 years"
-        path:
-          type: string
-          description: Путь к эндпоинту
-          example: /calculator/offers

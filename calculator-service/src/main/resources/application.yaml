@@ -5,11 +5,27 @@ spring:
   application:
     name: calculator-service
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+    display-request-duration: true
+  packages-to-scan:
+    - com.neoflex.calculator_service.rest
+    - net.proselyte.calculator.api
+  paths-to-match: /api/v1/**
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,metrics,loggers
   endpoint:
     prometheus:
       access: read_only
@@ -21,14 +37,26 @@ management:
     enabled: true
     sampling:
       probability: 1.0
+  metrics:
+    distribution:
+      percentiles-histogram:
+        all: true
+      slo:
+        "[http.server.requests]": 50ms,100ms,200ms,500ms,1s,2s
+  info:
+    env:
+      enabled: true
+    git:
+      mode: full
 
 credit:
-  base-rate: 15.0
-  insurance-cost: 100000
-  insurance-rate-discount: 3.0
-  salary-rate-discount: 1.0
-  min-amount: 20000
-  min-term: 6
+  base-rate: ${BASE_RATE:15.0}
+  insurance-cost: ${INSURANCE_COST:100000}
+  insurance-rate-discount: ${INSURANCE_RATE_DISCOUNT:3.0}
+  salary-rate-discount: ${SALARY_RATE_DISCOUNT:1.0}
+  min-amount: ${MIN_AMOUNT:20000}
+  min-term: ${MIN_TERM:6}
+  min-age: ${MIN_AGE:18}
 
 otel:
   exporter:

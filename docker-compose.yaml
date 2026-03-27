@@ -1,4 +1,7 @@
 services:
+  # ---------------------------------------------------------------------------
+  # Nexus - хранилище артефактов и зависимостей
+  # ---------------------------------------------------------------------------
   nexus:
     image: sonatype/nexus3:3.76.0
     container_name: nexus
@@ -14,7 +17,12 @@ services:
       interval: 5s
       timeout: 10s
       retries: 30
+    networks:
+      - neoflex-bank-credit-network
 
+  # ---------------------------------------------------------------------------
+  # Prometheus - сбор метрик
+  # ---------------------------------------------------------------------------
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -27,7 +35,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - neoflex-bank-credit-network
 
+  # ---------------------------------------------------------------------------
+  # Loki - сбор и хранение логов
+  # ---------------------------------------------------------------------------
   loki:
     image: grafana/loki:2.9.2
     container_name: loki
@@ -40,7 +53,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - neoflex-bank-credit-network
 
+  # ---------------------------------------------------------------------------
+  # TEMPO - хранилище трейсов (трассировок)
+  # ---------------------------------------------------------------------------
   tempo:
     image: grafana/tempo:2.4.1
     container_name: tempo
@@ -50,7 +68,12 @@ services:
       - tempo_data:/var/tempo
     ports:
       - "3200:3200"
+    networks:
+      - neoflex-bank-credit-network
 
+  # ---------------------------------------------------------------------------
+  # Alloy - сбор и отправка телеметрии
+  # ---------------------------------------------------------------------------
   alloy:
     image: grafana/alloy:latest
     container_name: alloy
@@ -71,32 +94,84 @@ services:
       - --server.http.listen-addr=0.0.0.0:9080
       - --storage.path=/var/lib/alloy/data
       - /etc/alloy/config.alloy
+    networks:
+      - neoflex-bank-credit-network
 
-#  grafana:
-#    image: grafana/grafana:10.3.1
-#    container_name: grafana
-#    ports:
-#      - "3000:3000"
-#    depends_on:
-#      prometheus:
-#        condition: service_healthy
-#      loki:
-#        condition: service_healthy
-#      tempo:
-#        condition: service_started
-#      alloy:
-#        condition: service_started
-#    environment:
-#      GF_AUTH_ANONYMOUS_ENABLED: true
-#      GF_SECURITY_ADMIN_USER: admin
-#      GF_SECURITY_ADMIN_PASSWORD: admin
-#      GF_METRICS_ENABLED: "true"
-#    volumes:
-#      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
-#      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
-#      - nexus-data:/nexus-data
-#    healthcheck:
-#      test: [ "CMD", "wget", "--spider", "http://localhost:3000/api/health" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 10
+  # ---------------------------------------------------------------------------
+  # Calculator API - API для вычисления кредитных ставок для пользователя
+  # ---------------------------------------------------------------------------
+  calculator-api:
+    build:
+      context: ./calculator-service
+      dockerfile: Dockerfile
+    container_name: calculator-api
+    ports:
+      - "8092:8092"
+    working_dir: /app
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      OTLP_EXPORTER_ENDPOINT: http://tempo:4318
+    depends_on:
+      nexus:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-i", "http://localhost:8092/actuator/health" ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - neoflex-bank-credit-network
+
+  grafana:
+    image: grafana/grafana:10.3.1
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_started
+      alloy:
+        condition: service_started
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      # Включаем метрики Grafana
+      GF_METRICS_ENABLED: "true"
+      GF_METRICS_BASIC_AUTH_USERNAME: admin
+      GF_METRICS_BASIC_AUTH_PASSWORD: admin
+      # Включаем логирование
+      GF_LOG_LEVEL: info
+      # Настройка доп. возможностей
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
+      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
+      - nexus-data:/nexus-data
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - neoflex-bank-credit-network
+
+
+volumes:
+  artifacts:
+  tempo_data:
+  nexus-data:
+  loki_data:
+  loki_chunks:
+  loki_index:
+  loki_rules:
+  grafana-data:
+
+networks:
+  neoflex-bank-credit-network:
+    name: neoflex-bank-credit
+    driver: bridge

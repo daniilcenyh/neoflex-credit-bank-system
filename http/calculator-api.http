@@ -1,0 +1,278 @@
+### Переменные окружения
+@baseUrl = http://localhost:8092
+@statementId = 123e4567-e89b-12d3-a456-426614174000
+
+### 1. Health Check
+GET {{baseUrl}}/actuator/health
+Accept: application/json
+
+### 2. Prometheus Metrics
+GET {{baseUrl}}/actuator/prometheus
+Accept: text/plain
+
+### 3. Расчет предложений (успешный сценарий)
+POST {{baseUrl}}/api/v1/calculator/offers
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Ivan",
+  "lastName": "Ivanov",
+  "middleName": "Ivanovich",
+  "email": "ivan@mail.com",
+  "birthdate": "1990-01-01",
+  "passportSeries": "1234",
+  "passportNumber": "123456"
+}
+
+### 4. Расчет предложений (без отчества - опционально)
+POST {{baseUrl}}/api/v1/calculator/offers
+Content-Type: application/json
+
+{
+  "amount": 300000,
+  "term": 24,
+  "firstName": "Petr",
+  "lastName": "Petrov",
+  "email": "petr@mail.com",
+  "birthdate": "1985-05-15",
+  "passportSeries": "5678",
+  "passportNumber": "901234"
+}
+
+### 5. Расчет предложений - ошибка валидации (слишком молодой)
+POST {{baseUrl}}/api/v1/calculator/offers
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Ivan",
+  "lastName": "Ivanov",
+  "email": "ivan@mail.com",
+  "birthdate": "2015-01-01",
+  "passportSeries": "1234",
+  "passportNumber": "123456"
+}
+
+### 6. Расчет предложений - ошибка валидации (неверный email)
+POST {{baseUrl}}/api/v1/calculator/offers
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Ivan",
+  "lastName": "Ivanov",
+  "email": "invalid-email",
+  "birthdate": "1990-01-01",
+  "passportSeries": "1234",
+  "passportNumber": "123456"
+}
+
+### 7. Расчет предложений - ошибка валидации (неверный паспорт)
+POST {{baseUrl}}/api/v1/calculator/offers
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Ivan",
+  "lastName": "Ivanov",
+  "email": "ivan@mail.com",
+  "birthdate": "1990-01-01",
+  "passportSeries": "123",
+  "passportNumber": "12345"
+}
+
+### 8. Полный расчет кредита - успешный сценарий (со страховкой, зарплатный клиент)
+POST {{baseUrl}}/api/v1/calculator/calc
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Ivan",
+  "lastName": "Ivanov",
+  "middleName": "Ivanovich",
+  "gender": "MALE",
+  "birthdate": "1990-01-01",
+  "passportSeries": "1234",
+  "passportNumber": "123456",
+  "passportIssueDate": "2010-01-01",
+  "passportIssueBranch": "Отделение УФМС России по г. Москва",
+  "maritalStatus": "MARRIED",
+  "dependentAmount": 2,
+  "employment": {
+    "employmentStatus": "EMPLOYED",
+    "employerINN": "7707083893",
+    "salary": 150000,
+    "position": "TOP_MANAGER",
+    "workExperienceTotal": 60,
+    "workExperienceCurrent": 24
+  },
+  "accountNumber": "40817810000000000001",
+  "isInsuranceEnabled": true,
+  "isSalaryClient": true
+}
+
+### 9. Полный расчет кредита - без страховки, не зарплатный клиент
+POST {{baseUrl}}/api/v1/calculator/calc
+Content-Type: application/json
+
+{
+  "amount": 1000000,
+  "term": 36,
+  "firstName": "Petr",
+  "lastName": "Petrov",
+  "middleName": "Petrovich",
+  "gender": "MALE",
+  "birthdate": "1988-03-20",
+  "passportSeries": "5678",
+  "passportNumber": "901234",
+  "passportIssueDate": "2012-06-15",
+  "passportIssueBranch": "Отделение УФМС России по г. Санкт-Петербург",
+  "maritalStatus": "SINGLE",
+  "dependentAmount": 0,
+  "employment": {
+    "employmentStatus": "SELF_EMPLOYED",
+    "employerINN": "7728168971",
+    "salary": 200000,
+    "position": "ENTREPRENEUR",
+    "workExperienceTotal": 48,
+    "workExperienceCurrent": 36
+  },
+  "accountNumber": "40817810000000000002",
+  "isInsuranceEnabled": false,
+  "isSalaryClient": false
+}
+
+### 10. Полный расчет кредита - женщина, со страховкой
+POST {{baseUrl}}/api/v1/calculator/calc
+Content-Type: application/json
+
+{
+  "amount": 750000,
+  "term": 24,
+  "firstName": "Anna",
+  "lastName": "Smirnova",
+  "middleName": "Ivanovna",
+  "gender": "FEMALE",
+  "birthdate": "1992-07-12",
+  "passportSeries": "3456",
+  "passportNumber": "789012",
+  "passportIssueDate": "2015-09-01",
+  "passportIssueBranch": "Отделение УФМС России по г. Екатеринбург",
+  "maritalStatus": "DIVORCED",
+  "dependentAmount": 1,
+  "employment": {
+    "employmentStatus": "EMPLOYED",
+    "employerINN": "7702070139",
+    "salary": 120000,
+    "position": "MIDDLE_MANAGER",
+    "workExperienceTotal": 36,
+    "workExperienceCurrent": 18
+  },
+  "accountNumber": "40817810000000000003",
+  "isInsuranceEnabled": true,
+  "isSalaryClient": false
+}
+
+### 11. Полный расчет кредита - отказ (безработный, маленький стаж)
+POST {{baseUrl}}/api/v1/calculator/calc
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Sidor",
+  "lastName": "Sidorov",
+  "gender": "MALE",
+  "birthdate": "1995-01-01",
+  "passportSeries": "1111",
+  "passportNumber": "222222",
+  "passportIssueDate": "2018-01-01",
+  "passportIssueBranch": "Отделение УФМС России по г. Новосибирск",
+  "maritalStatus": "SINGLE",
+  "dependentAmount": 0,
+  "employment": {
+    "employmentStatus": "UNEMPLOYED",
+    "employerINN": "0000000000",
+    "salary": 0,
+    "position": "UNEMPLOYED",
+    "workExperienceTotal": 0,
+    "workExperienceCurrent": 0
+  },
+  "accountNumber": "40817810000000000004",
+  "isInsuranceEnabled": false,
+  "isSalaryClient": false
+}
+
+### 12. Полный расчет кредита - отказ (пенсионный возраст)
+POST {{baseUrl}}/api/v1/calculator/calc
+Content-Type: application/json
+
+{
+  "amount": 200000,
+  "term": 12,
+  "firstName": "Ivan",
+  "lastName": "Starikov",
+  "gender": "MALE",
+  "birthdate": "1950-01-01",
+  "passportSeries": "9999",
+  "passportNumber": "888888",
+  "passportIssueDate": "2000-01-01",
+  "passportIssueBranch": "Отделение УФМС России по г. Казань",
+  "maritalStatus": "WIDOWED",
+  "dependentAmount": 0,
+  "employment": {
+    "employmentStatus": "UNEMPLOYED",
+    "employerINN": "0000000000",
+    "salary": 20000,
+    "position": "RETIRED",
+    "workExperienceTotal": 0,
+    "workExperienceCurrent": 0
+  },
+  "accountNumber": "40817810000000000005",
+  "isInsuranceEnabled": false,
+  "isSalaryClient": false
+}
+
+### 13. Тест всех комбинаций страховки и зарплатного статуса
+POST {{baseUrl}}/api/v1/calculator/calc
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Test",
+  "lastName": "User",
+  "gender": "MALE",
+  "birthdate": "1990-01-01",
+  "passportSeries": "1234",
+  "passportNumber": "123456",
+  "passportIssueDate": "2010-01-01",
+  "passportIssueBranch": "Test Branch",
+  "maritalStatus": "SINGLE",
+  "dependentAmount": 0,
+  "employment": {
+    "employmentStatus": "EMPLOYED",
+    "employerINN": "7707083893",
+    "salary": 100000,
+    "position": "IT_SPECIALIST",
+    "workExperienceTotal": 36,
+    "workExperienceCurrent": 12
+  },
+  "accountNumber": "40817810000000000006",
+  "isInsuranceEnabled": true,
+  "isSalaryClient": true
+}
+
+### 14. Получение OpenAPI спецификации (если доступно)
+GET {{baseUrl}}/v3/api-docs
+Accept: application/json
+
+### 15. Получение Swagger UI (если доступно)
+GET {{baseUrl}}/swagger-ui/index.html
+Accept: text/html

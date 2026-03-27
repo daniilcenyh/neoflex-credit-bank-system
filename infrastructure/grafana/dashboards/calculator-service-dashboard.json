@@ -1,0 +1,287 @@
+{
+  "title": "Calculator API - Minimal Dashboard",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "row",
+      "title": "Жизненно важные метрики",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Сервис жив?",
+      "targets": [
+        { "expr": "up{job=\"calculator-api\"}", "refId": "A" }
+      ],
+      "gridPos": { "x": 0, "y": 1, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "HTTP ошибки (5xx)",
+      "targets": [
+        {
+          "expr": "sum(http_server_requests_seconds_count{job=\"calculator-api\", status=~\"5..\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 3, "y": 1, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": 0 },
+                { "color": "red", "value": 1 }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Всего запросов",
+      "targets": [
+        {
+          "expr": "sum(http_server_requests_seconds_count{job=\"calculator-api\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 6, "y": 1, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Текущий RPS",
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"calculator-api\"}[1m]))",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 9, "y": 1, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Бизнес-метрики (самое важное)",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Расчетов предложений",
+      "targets": [
+        {
+          "expr": "sum(calculator_offers_calculated_total{job=\"calculator-api\", status=\"success\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 5, "w": 4, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Расчетов кредитов",
+      "targets": [
+        {
+          "expr": "sum(calculator_credit_calculated_total{job=\"calculator-api\", status=\"success\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 4, "y": 5, "w": 4, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Ошибки в offers",
+      "targets": [
+        {
+          "expr": "sum(calculator_offers_calculated_total{job=\"calculator-api\", status=\"error\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 8, "y": 5, "w": 4, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Ошибки в credit",
+      "targets": [
+        {
+          "expr": "sum(calculator_credit_calculated_total{job=\"calculator-api\", status=\"error\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 5, "w": 4, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          }
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Графики",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 1 }
+    },
+    {
+      "type": "timeseries",
+      "title": "RPS по эндпоинтам",
+      "targets": [
+        {
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"calculator-api\"}[1m]))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 9, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Время ответа (p95)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{job=\"calculator-api\"}[1m])))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 9, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Бизнес-операции в секунду",
+      "targets": [
+        {
+          "expr": "rate(calculator_offers_calculated_total{job=\"calculator-api\"}[1m])",
+          "legendFormat": "offers",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(calculator_credit_calculated_total{job=\"calculator-api\"}[1m])",
+          "legendFormat": "credit",
+          "refId": "B"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 17, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Время выполнения бизнес-операций",
+      "targets": [
+        {
+          "expr": "rate(calculator_offers_calculated_duration_sum{job=\"calculator-api\"}[1m]) / rate(calculator_offers_calculated_duration_count{job=\"calculator-api\"}[1m])",
+          "legendFormat": "offers avg",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(calculator_credit_calculated_duration_sum{job=\"calculator-api\"}[1m]) / rate(calculator_credit_calculated_duration_count{job=\"calculator-api\"}[1m])",
+          "legendFormat": "credit avg",
+          "refId": "B"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 17, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Ресурсы",
+      "gridPos": { "x": 0, "y": 25, "w": 24, "h": 1 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Память (Heap)",
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{area=\"heap\", job=\"calculator-api\"}",
+          "legendFormat": "used",
+          "refId": "A"
+        },
+        {
+          "expr": "jvm_memory_max_bytes{area=\"heap\", job=\"calculator-api\"}",
+          "legendFormat": "max",
+          "refId": "B"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 26, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU",
+      "targets": [
+        {
+          "expr": "process_cpu_usage{job=\"calculator-api\"} * 100",
+          "legendFormat": "cpu %",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 26, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Последние ошибки в логах",
+      "gridPos": { "x": 0, "y": 34, "w": 24, "h": 1 }
+    },
+    {
+      "type": "logs",
+      "title": "Логи с ошибками",
+      "targets": [
+        {
+          "expr": "{container=\"calculator-api\"} |= \"error\"",
+          "refId": "A"
+        }
+      ],
+      "datasource": "Loki",
+      "gridPos": { "x": 0, "y": 35, "w": 24, "h": 10 },
+      "options": {
+        "showLabels": true,
+        "showTime": true
+      }
+    }
+  ]
+}
