@@ -28,6 +28,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -76,7 +77,7 @@ public class Statement {
 //    private List<StatementStatusHistoryDto> statusHistory;
 
     @OneToMany(mappedBy = "statement", cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE})
-    private List<StatusHistory> statusHistories;
+    private List<StatusHistory> statusHistories = new ArrayList<>();
 
     @NotNull
     @ColumnDefault("(now) AT TIME ZONE 'utc'::text")
