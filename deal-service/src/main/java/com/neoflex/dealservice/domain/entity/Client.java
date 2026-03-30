@@ -13,6 +13,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -60,7 +62,7 @@ public class Client {
     private String accountNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "gender", nullable = false)
+    @Column(name = "gender")
     private Gender gender;
 
     @Enumerated(EnumType.STRING)
@@ -82,12 +84,22 @@ public class Client {
     private List<Statement> statements;
 
     @NotNull
-    @ColumnDefault("(now) AT TIME ZONE 'utc'::text")
     @Column(name = "created", nullable = false)
     private Instant created;
 
     @NotNull
-    @ColumnDefault("(now) AT TIME ZONE 'utc'::text")
     @Column(name = "updated", nullable = false)
     private Instant updated;
+
+    @PrePersist
+    protected void onCreate() {
+        Instant now = Instant.now();
+        created = now;
+        updated = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updated = Instant.now();
+    }
 }

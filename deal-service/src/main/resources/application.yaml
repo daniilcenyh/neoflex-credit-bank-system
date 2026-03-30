@@ -11,7 +11,7 @@ spring:
     enabled: true
     validate-on-migrate: true
     baseline-on-migrate: true
-    locations: classpath:db/migration
+    locations: classpath:db/migration/v1
   jpa:
     hibernate:
       ddl-auto: validate
@@ -93,5 +93,5 @@ logging:
 
 calculator-api:
   base-url: ${BASE_URL:http://localhost:8092}
-  api-get-offers: ${API_GET_OFFERS:/api/v1/calculator/offers}
-  api-calculate-credit: ${API_CALCULATE_CREDIT}
+  api-get-offers: ${API_GET_OFFERS:http://localhost:8092/api/v1/calculator/offers}
+  api-calculate-credit: ${API_CALCULATE_CREDIT:http://localhost:8092/api/v1/calculator/calc}

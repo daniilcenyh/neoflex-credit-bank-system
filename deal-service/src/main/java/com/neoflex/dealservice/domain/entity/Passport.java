@@ -6,6 +6,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -49,12 +51,22 @@ public class Passport {
     private Client client;
 
     @NotNull
-    @ColumnDefault("(now) AT TIME ZONE 'utc'::text")
     @Column(name = "created", nullable = false)
     private Instant created;
 
     @NotNull
-    @ColumnDefault("(now) AT TIME ZONE 'utc'::text")
     @Column(name = "updated", nullable = false)
     private Instant updated;
+
+    @PrePersist
+    protected void onCreate() {
+        Instant now = Instant.now();
+        created = now;
+        updated = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updated = Instant.now();
+    }
 }

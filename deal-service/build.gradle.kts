@@ -295,7 +295,7 @@ publishing {
 
                 create<MavenPublication>("publish${name.replaceFirstChar(Char::uppercase)}Jar") {
                     artifact(jarFile)
-                    groupId = "net.proselyte"
+                    groupId = "com.neoflex"
                     artifactId = jarBaseName
                     version = "1.0.0-SNAPSHOT"
 

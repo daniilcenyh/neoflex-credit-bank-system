@@ -3,6 +3,7 @@
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="FrameworkDetectionExcludesConfiguration">
     <file type="web" url="file://$PROJECT_DIR$/calculator-service" />
+    <file type="web" url="file://$PROJECT_DIR$/deal-service" />
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_24" project-jdk-name="24" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />

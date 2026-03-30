@@ -16,7 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CalculatorClient {
 
-    @Value("${calculator-api.calculator-api-uri}")
+    @Value("${calculator-api.api-get-offers}")
     private String API_GET_OFFERS;
 
     @Value("${calculator-api.api-calculate-credit}")
