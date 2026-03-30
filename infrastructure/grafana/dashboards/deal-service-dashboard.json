@@ -1,0 +1,450 @@
+{
+  "title": "Deal API - Minimal Dashboard",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "row",
+      "title": "Жизненно важные метрики",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Сервис жив?",
+      "targets": [
+        { "expr": "up{job=\"deal-api\"}", "refId": "A" }
+      ],
+      "gridPos": { "x": 0, "y": 1, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "HTTP ошибки (5xx)",
+      "targets": [
+        {
+          "expr": "sum(http_server_requests_seconds_count{job=\"deal-api\", status=~\"5..\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 3, "y": 1, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": 0 },
+                { "color": "red", "value": 1 }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Всего запросов",
+      "targets": [
+        {
+          "expr": "sum(http_server_requests_seconds_count{job=\"deal-api\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 6, "y": 1, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Текущий RPS",
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"deal-api\"}[1m]))",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 9, "y": 1, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Бизнес-метрики (самое важное)",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Расчетов statement",
+      "targets": [
+        {
+          "expr": "sum(deal_statement_calculated_total{job=\"deal-api\", status=\"success\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 5, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Выборов оффера",
+      "targets": [
+        {
+          "expr": "sum(deal_offer_selected_total{job=\"deal-api\", status=\"success\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 3, "y": 5, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Расчетов кредита",
+      "targets": [
+        {
+          "expr": "sum(deal_credit_calculated_total{job=\"deal-api\", status=\"success\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 6, "y": 5, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Ошибки в statement",
+      "targets": [
+        {
+          "expr": "sum(deal_statement_calculated_total{job=\"deal-api\", status=\"error\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 9, "y": 5, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Ошибки в офферах",
+      "targets": [
+        {
+          "expr": "sum(deal_offer_selected_total{job=\"deal-api\", status=\"error\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 5, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Ошибки в кредите",
+      "targets": [
+        {
+          "expr": "sum(deal_credit_calculated_total{job=\"deal-api\", status=\"error\"})",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 15, "y": 5, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          }
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Графики",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 1 }
+    },
+    {
+      "type": "timeseries",
+      "title": "RPS по эндпоинтам",
+      "targets": [
+        {
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"deal-api\"}[1m]))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 9, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Время ответа (p95)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{job=\"deal-api\"}[1m])))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 9, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Бизнес-операции в секунду",
+      "targets": [
+        {
+          "expr": "rate(deal_statement_calculated_total{job=\"deal-api\"}[1m])",
+          "legendFormat": "statement",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(deal_offer_selected_total{job=\"deal-api\"}[1m])",
+          "legendFormat": "offer",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(deal_credit_calculated_total{job=\"deal-api\"}[1m])",
+          "legendFormat": "credit",
+          "refId": "C"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 17, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Время выполнения бизнес-операций",
+      "targets": [
+        {
+          "expr": "rate(deal_statement_calculated_duration_sum{job=\"deal-api\"}[1m]) / rate(deal_statement_calculated_duration_count{job=\"deal-api\"}[1m])",
+          "legendFormat": "statement avg",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(deal_offer_selected_duration_sum{job=\"deal-api\"}[1m]) / rate(deal_offer_selected_duration_count{job=\"deal-api\"}[1m])",
+          "legendFormat": "offer avg",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(deal_credit_calculated_duration_sum{job=\"deal-api\"}[1m]) / rate(deal_credit_calculated_duration_count{job=\"deal-api\"}[1m])",
+          "legendFormat": "credit avg",
+          "refId": "C"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 17, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Ресурсы",
+      "gridPos": { "x": 0, "y": 25, "w": 24, "h": 1 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Память (Heap)",
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{area=\"heap\", job=\"deal-api\"}",
+          "legendFormat": "used",
+          "refId": "A"
+        },
+        {
+          "expr": "jvm_memory_max_bytes{area=\"heap\", job=\"deal-api\"}",
+          "legendFormat": "max",
+          "refId": "B"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 26, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU",
+      "targets": [
+        {
+          "expr": "process_cpu_usage{job=\"deal-api\"} * 100",
+          "legendFormat": "cpu %",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 26, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "База данных",
+      "gridPos": { "x": 0, "y": 34, "w": 24, "h": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "БД доступна?",
+      "targets": [
+        {
+          "expr": "health{job=\"deal-api\", component=\"db\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 35, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Активные соединения",
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active{job=\"deal-api\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 3, "y": 35, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Всего соединений",
+      "targets": [
+        {
+          "expr": "hikaricp_connections{job=\"deal-api\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 6, "y": 35, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Ожидающие",
+      "targets": [
+        {
+          "expr": "hikaricp_connections_pending{job=\"deal-api\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 9, "y": 35, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Таймауты",
+      "targets": [
+        {
+          "expr": "hikaricp_connections_timeout_total{job=\"deal-api\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 35, "w": 3, "h": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Использование пула соединений",
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active{job=\"deal-api\"}",
+          "legendFormat": "active",
+          "refId": "A"
+        },
+        {
+          "expr": "hikaricp_connections_max{job=\"deal-api\"}",
+          "legendFormat": "max",
+          "refId": "B"
+        },
+        {
+          "expr": "hikaricp_connections{job=\"deal-api\"}",
+          "legendFormat": "total",
+          "refId": "C"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 38, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Время получения соединения (миллисекунды)",
+      "targets": [
+        {
+          "expr": "hikaricp_connection_acquire_seconds_sum{job=\"deal-api\"} / hikaricp_connection_acquire_seconds_count{job=\"deal-api\"} * 1000",
+          "legendFormat": "avg acquire time (ms)",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 38, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Последние ошибки в логах",
+      "gridPos": { "x": 0, "y": 46, "w": 24, "h": 1 }
+    },
+    {
+      "type": "logs",
+      "title": "Логи с ошибками",
+      "targets": [
+        {
+          "expr": "{container=\"deal-api\"} |= \"error\"",
+          "refId": "A"
+        }
+      ],
+      "datasource": "Loki",
+      "gridPos": { "x": 0, "y": 47, "w": 24, "h": 10 },
+      "options": {
+        "showLabels": true,
+        "showTime": true
+      }
+    }
+  ]
+}

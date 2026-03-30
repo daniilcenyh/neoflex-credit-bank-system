@@ -25,6 +25,8 @@ import com.neoflex.dealservice.exception.EmptyStatementIdException;
 import com.neoflex.dealservice.exception.OfferNotSelectedException;
 import com.neoflex.dealservice.exception.PassportAlreadyExistException;
 import com.neoflex.dealservice.exception.StatementNotFoundException;
+import com.neoflex.dealservice.metrics.annotation.BusinessMetric;
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -40,6 +42,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Observed(name = "deal.service")
 public class DealService {
 
     private final ClientRepository clientRepository;
@@ -49,6 +52,11 @@ public class DealService {
     private final CalculatorClient calculatorClient;
 
     @Transactional
+    @BusinessMetric(
+            value = "deal.statement.calculated",
+            tags = {"operation=calculate", "type=statement"}
+    )
+    @Observed(name = "deal.statement", contextualName = "calculate-statement")
     public List<LoanOfferDto> calculateStatement(LoanStatementRequestDto request) {
         // 1) проверка перед занесением паспорта пользователя в БД, на то что этот паспорт уже есть
         if (passportRepository.existsBySeriesAndNumber(request.getPassportSeries(), request.getPassportNumber())) {
@@ -110,6 +118,11 @@ public class DealService {
     }
 
     @Transactional
+    @BusinessMetric(
+            value = "deal.offer.selected",
+            tags = {"operation=select", "type=offer"}
+    )
+    @Observed(name = "deal.offer", contextualName = "select-offer")
     public void selectOffer(LoanOfferDto request) {
         log.info("Выбор предложения для заявки: {}", request.getStatementId());
         // 1) получение и проверка на пустоту statementId
@@ -141,6 +154,11 @@ public class DealService {
     }
 
     @Transactional
+    @BusinessMetric(
+            value = "deal.credit.calculated",
+            tags = {"operation=calculate", "type=credit"}
+    )
+    @Observed(name = "deal.credit", contextualName = "calculate-credit")
     public void calculateCredit(UUID statementId, FinishRegistrationRequestDto request) {
         log.info("Начало расчёта кредита для сделки ID: {}", statementId);
         // проверка входных данных

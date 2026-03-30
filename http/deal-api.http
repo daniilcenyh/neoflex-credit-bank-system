@@ -21,9 +21,9 @@ Content-Type: application/json
   "firstName": "Daniil",
   "lastName": "Chernykh",
   "middleName": "Nickolaevich",
-  "email": "daniilcernyh2006@mail.com",
+  "email": "daniilcernyh2002@mail.com",
   "birthdate": "2006-02-05",
-  "passportSeries": "2020",
+  "passportSeries": "2021",
   "passportNumber": "403291"
 }
 
@@ -33,7 +33,7 @@ POST {{baseUrl}}/deal/offer/select
 Content-Type: application/json
 
 {
-  "statementId": "85164af7-d8f5-4d95-9a7d-ea0e16d7153b",
+  "statementId": "e9298810-afab-4d82-a84c-bea87296c94e",
   "requestedAmount": 500000,
   "totalAmount": 600000,
   "term": 12,
@@ -44,7 +44,7 @@ Content-Type: application/json
 }
 
 ### Завершение заявки для меня (тестирование полного цикла работы АПИ)
-POST {{baseUrl}}/deal/calculate/85164af7-d8f5-4d95-9a7d-ea0e16d7153b
+POST {{baseUrl}}/deal/calculate/e9298810-afab-4d82-a84c-bea87296c94e
 Content-Type: application/json
 
 {
