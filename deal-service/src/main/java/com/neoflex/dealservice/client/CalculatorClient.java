@@ -7,12 +7,13 @@ import com.neoflex.deal.dto.ScoringDataDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
-@Service
+@Component
 @RequiredArgsConstructor
 public class CalculatorClient {
 
