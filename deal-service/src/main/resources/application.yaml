@@ -2,6 +2,9 @@ server:
   port: 8093
 
 spring:
+  profiles:
+    active: elk
+
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5434}/${DB_NAME:deal}
     username: ${POSTGRES_USERNAME:postgres}
@@ -88,6 +91,7 @@ otel:
     exporter: none
   metrics:
     exporter: none
+
 logging:
   config: "classpath:logback.xml"
 

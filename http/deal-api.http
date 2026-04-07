@@ -33,7 +33,7 @@ POST {{baseUrl}}/deal/offer/select
 Content-Type: application/json
 
 {
-  "statementId": "e9298810-afab-4d82-a84c-bea87296c94e",
+  "statementId": "3acb58d0-2d08-4fbb-aeb4-922bd07dfa84",
   "requestedAmount": 500000,
   "totalAmount": 600000,
   "term": 12,
@@ -44,7 +44,7 @@ Content-Type: application/json
 }
 
 ### Завершение заявки для меня (тестирование полного цикла работы АПИ)
-POST {{baseUrl}}/deal/calculate/e9298810-afab-4d82-a84c-bea87296c94e
+POST {{baseUrl}}/deal/calculate/3acb58d0-2d08-4fbb-aeb4-922bd07dfa84
 Content-Type: application/json
 
 {

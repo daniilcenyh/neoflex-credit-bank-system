@@ -30,6 +30,7 @@ import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +50,8 @@ public class DealService {
     private final PassportRepository passportRepository;
     private final StatementRepository statementRepository;
     private final CreditRepository creditRepository;
-    private final CalculatorClient calculatorClient;
+//    private final CalculatorClient calculatorClient;
+    private final CalculatorService calculatorService;
 
     @Transactional
     @BusinessMetric(
@@ -105,16 +107,29 @@ public class DealService {
         newStatementToSave.setStatusHistories(List.of(newStatusHistory));
         var savedStatement = statementRepository.save(newStatementToSave);
 
-        // 6) отправка запроса в calculator-api
-        List<LoanOfferDto> offers = calculatorClient.getOffers(request);
-        for (LoanOfferDto offer: offers) {
-            offer.setStatementId(savedStatement.getStatementId());
+
+        try {
+            MDC.put("client_id", savedClient.getClientId().toString());
+            MDC.put("statement_id", savedStatement.getStatementId().toString());
+            MDC.put("amount", request.getAmount().toString());
+            MDC.put("statement_status", savedStatement.getStatus().toString());
+
+            // 6) отправка запроса в calculator-api
+            List<LoanOfferDto> offers = calculatorService.getOffers(request, MDC.getCopyOfContextMap());
+            for (LoanOfferDto offer: offers) {
+                offer.setStatementId(savedStatement.getStatementId());
+            }
+
+            offers.sort(Comparator.comparing(LoanOfferDto::getRate).reversed());
+
+            log.info("Сгенерировано [{}] предложений", offers.size());
+            return offers;
+        } finally {
+            MDC.remove("client_id");
+            MDC.remove("statement_id");
+            MDC.remove("amount");
+            MDC.remove("statement_status");
         }
-
-        offers.sort(Comparator.comparing(LoanOfferDto::getRate).reversed());
-
-        log.info("Сгенерировано {} предложений", offers.size());
-        return offers;
     }
 
     @Transactional
@@ -214,7 +229,7 @@ public class DealService {
                 scoringData.getIsInsuranceEnabled(), scoringData.getIsSalaryClient());
 
         // 5) отправка запроса в калькулятор
-        CreditDto creditDto = calculatorClient.calculateCredit(scoringData);
+        CreditDto creditDto = calculatorService.calculateCredit(scoringData);
         log.debug("Получен ответ от calculator-service: amount={}, term={}, monthlyPayment={}, rate={}",
                 creditDto.getAmount(), creditDto.getTerm(),
                 creditDto.getMonthlyPayment(), creditDto.getRate());

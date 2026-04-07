@@ -2,6 +2,8 @@ server:
   port: 8092
 
 spring:
+  profiles:
+    active: elk
   application:
     name: calculator-service
 

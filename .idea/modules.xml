@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/calculator-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/calculator-service.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/calculator-service.test.iml" filepath="$PROJECT_DIR$/.idea/modules/calculator-service.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/deal-service.test.iml" filepath="$PROJECT_DIR$/.idea/modules/deal-service.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/neoflex-bank-credit-system.iml" filepath="$PROJECT_DIR$/.idea/neoflex-bank-credit-system.iml" />
     </modules>

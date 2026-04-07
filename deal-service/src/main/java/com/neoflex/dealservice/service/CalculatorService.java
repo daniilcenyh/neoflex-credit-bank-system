@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -19,8 +20,8 @@ public class CalculatorService {
     private final CalculatorClient calculatorClient;
 
     // TODO: добавить паттерн RETRY + Circuit Breaker
-    public List<LoanOfferDto> getOffers(LoanStatementRequestDto request) {
-        return calculatorClient.getOffers(request);
+    public List<LoanOfferDto> getOffers(LoanStatementRequestDto request,  Map<String, String> context) {
+        return calculatorClient.getOffers(request, context);
     }
 
     // TODO: добавить паттерн RETRY + Circuit Breaker
