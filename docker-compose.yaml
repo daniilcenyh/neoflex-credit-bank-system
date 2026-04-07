@@ -1,236 +1,3 @@
-#services:
-#  # ---------------------------------------------------------------------------
-#  # База данных для сервиса Deal API
-#  # ---------------------------------------------------------------------------
-#  deal-postgres-db:
-#    image: postgres:17
-#    container_name: deal-postgres-db
-#    environment:
-#      POSTGRES_USER: postgres #${POSTGRES_USERNAME:postgres}
-#      POSTGRES_PASSWORD: postgres # ${POSTGRES_PASSWORD:postgres}
-#      POSTGRES_DB: deal # ${DB_NAME:deal}
-#    volumes:
-#      - ./infrastructure/databases/deal:/docker-entrypoint-initdb.d:ro
-#    ports:
-#      - "5434:5432"
-#    healthcheck:
-#      test: [ "CMD-SHELL", "pg_isready -U postgres -p 5432" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 20
-#
-##  deal-postgres-db-exporter:
-##    image: prometheuscommunity/postgres-exporter:latest
-##    container_name: deal-postgres-db-exporter
-##    depends_on:
-##      deal-postgres-db:
-##        condition: service_healthy
-##    environment:
-##      DATA_SOURCE_NAME: postgresql://postgres:postgres@deal-postgres-dbs:5432/postgres?sslmode=disable
-##    ports:
-##      - "9188:9187"
-#
-#  # ---------------------------------------------------------------------------
-#  # Nexus - хранилище артефактов и зависимостей
-#  # ---------------------------------------------------------------------------
-#  nexus:
-#    image: sonatype/nexus3:3.76.0
-#    container_name: nexus
-#    ports:
-#      - "8081:8081"
-#    environment:
-#      NEXUS_SECURITY_INITIAL_PASSWORD: admin
-#      NEXUS_SECURITY_RANDOMPASSWORD: false
-#    volumes:
-#      - nexus-data:/nexus-data
-#    healthcheck:
-#      test: [ "CMD", "curl", "-f", "http://localhost:8081/service/rest/v1/status" ]
-#      interval: 5s
-#      timeout: 10s
-#      retries: 30
-#    networks:
-#      - neoflex-bank-credit-network
-#
-#  # ---------------------------------------------------------------------------
-#  # Prometheus - сбор метрик
-#  # ---------------------------------------------------------------------------
-#  prometheus:
-#    image: prom/prometheus:latest
-#    container_name: prometheus
-#    ports:
-#      - "9090:9090"
-#    volumes:
-#      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-#    healthcheck:
-#      test: [ "CMD", "wget", "--spider", "http://localhost:9090/-/healthy" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
-#    networks:
-#      - neoflex-bank-credit-network
-#
-#  # ---------------------------------------------------------------------------
-#  # Loki - сбор и хранение логов
-#  # ---------------------------------------------------------------------------
-#  loki:
-#    image: grafana/loki:2.9.2
-#    container_name: loki
-#    ports:
-#      - "3100:3100"
-#    volumes:
-#      - ./infrastructure/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
-#    healthcheck:
-#      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:3100/ready" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
-#    networks:
-#      - neoflex-bank-credit-network
-#
-#  # ---------------------------------------------------------------------------
-#  # TEMPO - хранилище трейсов (трассировок)
-#  # ---------------------------------------------------------------------------
-#  tempo:
-#    image: grafana/tempo:2.4.1
-#    container_name: tempo
-#    command: [ "-config.file=/etc/tempo/tempo.yaml" ]
-#    volumes:
-#      - ./infrastructure/tempo/tempo.yaml:/etc/tempo/tempo.yaml
-#      - tempo_data:/var/tempo
-#    ports:
-#      - "3200:3200"
-#    networks:
-#      - neoflex-bank-credit-network
-#
-#  # ---------------------------------------------------------------------------
-#  # Alloy - сбор и отправка телеметрии
-#  # ---------------------------------------------------------------------------
-#  alloy:
-#    image: grafana/alloy:latest
-#    container_name: alloy
-#    user: root
-#    ports:
-#      - "9080:9080" # HTTP interface
-#      - "4317:4317" # OTLP gRPC
-#      - "4318:4318" # OTLP http
-#    volumes:
-#      - ./infrastructure/alloy/config.alloy:/etc/alloy/config.alloy:ro
-#      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-#      - /var/run/docker.sock:/var/run/docker.sock
-#      - /var/log:/var/log:ro
-#    environment:
-#      GRAFANA_LOKI_URL: http://loki:3100/loki/api/v1/push
-#    command:
-#      - run
-#      - --server.http.listen-addr=0.0.0.0:9080
-#      - --storage.path=/var/lib/alloy/data
-#      - /etc/alloy/config.alloy
-#    networks:
-#      - neoflex-bank-credit-network
-#
-#  # ---------------------------------------------------------------------------
-#  # Calculator API - API для вычисления кредитных ставок для пользователя
-#  # ---------------------------------------------------------------------------
-#  calculator-api:
-#    build:
-#      context: ./calculator-service
-#      dockerfile: Dockerfile
-#    container_name: calculator-api
-#    ports:
-#      - "8092:8092"
-#    working_dir: /app
-#    environment:
-#      SPRING_PROFILES_ACTIVE: docker
-#      OTLP_EXPORTER_ENDPOINT: http://tempo:4318
-#    depends_on:
-#      nexus:
-#        condition: service_healthy
-#    healthcheck:
-#      test: [ "CMD", "curl", "-i", "http://localhost:8092/actuator/health" ]
-#      interval: 5s
-#      timeout: 5s
-#      retries: 30
-#    networks:
-#      - neoflex-bank-credit-network
-#
-#  deal-api:
-#    build:
-#      context: ./deal-service
-#      dockerfile: Dockerfile
-#    container_name: deal-api
-#    ports:
-#      - "8093:8093"
-#    working_dir: /app
-#    environment:
-#      POSTGRES_HOST: ${POSTGRES_HOST:localhost}
-#      POSTGRES_PORT: ${POSTGRES_PORT:5432}
-#      SPRING_PROFILES_ACTIVE: docker
-#      OTLP_EXPORTER_ENDPOINT: http://tempo:4318
-#    depends_on:
-#      deal-postgres-db:
-#        condition: service_healthy
-#    healthcheck:
-#      test: [ "CMD", "curl", "-i", "http://localhost:8093/actuator/health" ]
-#      interval: 5s
-#      timeout: 5s
-#      retries: 30
-#
-#  grafana:
-#    image: grafana/grafana:10.3.1
-#    container_name: grafana
-#    ports:
-#      - "3000:3000"
-#    depends_on:
-#      prometheus:
-#        condition: service_healthy
-#      loki:
-#        condition: service_healthy
-#      tempo:
-#        condition: service_started
-#      alloy:
-#        condition: service_started
-#    environment:
-#      GF_AUTH_ANONYMOUS_ENABLED: true
-#      GF_SECURITY_ADMIN_USER: admin
-#      GF_SECURITY_ADMIN_PASSWORD: admin
-#      # Включаем метрики Grafana
-#      GF_METRICS_ENABLED: "true"
-#      GF_METRICS_BASIC_AUTH_USERNAME: admin
-#      GF_METRICS_BASIC_AUTH_PASSWORD: admin
-#      # Включаем логирование
-#      GF_LOG_LEVEL: info
-#      # Настройка доп. возможностей
-#      GF_INSTALL_PLUGINS: grafana-piechart-panel
-#    volumes:
-#      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
-#      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
-#      - nexus-data:/nexus-data
-#    healthcheck:
-#      test: [ "CMD", "wget", "--spider", "http://localhost:3000/api/health" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 10
-#    networks:
-#      - neoflex-bank-credit-network
-#
-#
-#volumes:
-#  artifacts:
-#  tempo_data:
-#  nexus-data:
-#  loki_data:
-#  loki_chunks:
-#  loki_index:
-#  loki_rules:
-#  grafana-data:
-#
-#networks:
-#  neoflex-bank-credit-network:
-#    name: neoflex-bank-credit
-#    driver: bridge
-
-
-
 services:
   # ---------------------------------------------------------------------------
   # База данных для сервиса Deal API
@@ -364,7 +131,8 @@ services:
       - "8092:8092"
     working_dir: /app
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: elk
+      ENVIRONMENT: production
       OTLP_EXPORTER_ENDPOINT: ${OTLP_EXPORTER_ENDPOINT:-http://tempo:4318}
     depends_on:
       nexus:
@@ -394,7 +162,8 @@ services:
       POSTGRES_USERNAME: ${POSTGRES_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DB_NAME: ${DB_NAME:-deal}
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: elk
+      ENVIRONMENT: production
       OTLP_EXPORTER_ENDPOINT: ${OTLP_EXPORTER_ENDPOINT:-http://tempo:4318}
       SHOW_SQL: ${SHOW_SQL:-true}
       FORMAT_SQL: ${FORMAT_SQL:-true}
@@ -454,6 +223,109 @@ services:
     networks:
       - neoflex-bank-credit-network
 
+  # =============================================================================
+  # ELK СТЕК - структурированное логирование
+  # =============================================================================
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: elasticsearch_credit_system
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=true
+      - "cluster.name=neoflex-credit-system-elk"
+    ports:
+      - "${ELASTICSEARCH_PORT}:9200"  # HTTP API
+      - "9300:9300"  # Transport protocol
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    networks:
+      - neoflex-bank-credit-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Elasticsearch Exporter для мониторинга в Prometheus
+  elasticsearch-exporter:
+    image: prometheuscommunity/elasticsearch-exporter:latest
+    container_name: elasticsearch_exporter_credit_system
+    command:
+      - '--es.uri=http://elasticsearch:9200'
+      - '--es.all'                 # Собирать метрики со всех нод
+      - '--es.indices'             # Собирать метрики по индексам
+      - '--es.indices_settings'    # Собирать настройки индексов
+      - '--es.shards'              # Собирать метрики по шардам
+    ports:
+      - "9114:9114"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - neoflex-bank-credit-network
+
+  logstash:
+    image: logstash:8.11.0
+    container_name: logstash_credit_system
+    ports:
+      - "${LOGSTASH_PORT}:5000"   # TCP input для логов
+      - "9600:9600"               # Monitoring API
+    volumes:
+      - ./infrastructure/elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./infrastructure/elk/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+    environment:
+      LS_JAVA_OPTS: "-Xms256m -Xmx256m"
+      # Параметры подключения к Elasticsearch
+      ELASTICSEARCH_HOSTS: "http://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - neoflex-bank-credit-network
+
+  kibana:
+    image: kibana:8.11.0
+    container_name: kibana_credit_system
+    ports:
+      - "${KIBANA_PORT}:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: "http://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}"
+      # Локализация
+      I18N_LOCALE: ru
+      # Настройки по умолчанию
+      KIBANA_DEFAULT_APP_ID: discover
+      SERVER_NAME: kibana_credit_system
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - neoflex-bank-credit-network
+
+  # Опционально: Filebeat для сбора логов из файлов (альтернатива TCP)
+  filebeat:
+    image: elastic/filebeat:8.11.0
+    container_name: filebeat_credit_system
+    user: root
+    volumes:
+      - ./infrastructure/elk/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: ["--strict.perms=false"]
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      logstash:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - neoflex-bank-credit-network
+
 volumes:
   artifacts:
   tempo_data:
@@ -463,6 +335,8 @@ volumes:
   loki_index:
   loki_rules:
   grafana-data:
+  elasticsearch_data:
+  filebeat_data:
 
 networks:
   neoflex-bank-credit-network:
