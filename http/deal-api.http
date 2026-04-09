@@ -1,0 +1,258 @@
+### Переменные окружения
+@baseUrl = http://localhost:8093
+# Вручную укажите statementId после создания заявки
+@statementId = 123e4567-e89b-12d3-a456-426614174000
+
+### 1. Health Check
+GET {{baseUrl}}/actuator/health
+Accept: application/json
+
+### 2. Prometheus Metrics
+GET {{baseUrl}}/actuator/prometheus
+Accept: text/plain
+
+### 3. Создание заявки и расчёт предложений (успешный сценарий)
+POST {{baseUrl}}/deal/statement
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Daniil",
+  "lastName": "Chernykh",
+  "middleName": "Nickolaevich",
+  "email": "daniilcernyh2002@mail.com",
+  "birthdate": "2006-02-05",
+  "passportSeries": "2021",
+  "passportNumber": "403291"
+}
+
+
+### Выбор заявки для меня (тестирование полного цикла работы АПИ)
+POST {{baseUrl}}/deal/offer/select
+Content-Type: application/json
+
+{
+  "statementId": "3acb58d0-2d08-4fbb-aeb4-922bd07dfa84",
+  "requestedAmount": 500000,
+  "totalAmount": 600000,
+  "term": 12,
+  "monthlyPayment": 53029.00,
+  "rate": 11.0,
+  "isInsuranceEnabled": true,
+  "isSalaryClient": true
+}
+
+### Завершение заявки для меня (тестирование полного цикла работы АПИ)
+POST {{baseUrl}}/deal/calculate/3acb58d0-2d08-4fbb-aeb4-922bd07dfa84
+Content-Type: application/json
+
+{
+  "gender": "MALE",
+  "maritalStatus": "SINGLE",
+  "dependentAmount": 0,
+  "passportIssueDate": "2020-03-15",
+  "passportIssueBranch": "Отделение УФМС России по г. Москва",
+  "employment": {
+    "employmentStatus": "EMPLOYED",
+    "employerINN": "7707083893",
+    "salary": 150000,
+    "position": "MIDDLE_MANAGER",
+    "workExperienceTotal": 24,
+    "workExperienceCurrent": 12
+  },
+  "accountNumber": "40817810000000000001"
+}
+
+### 4. Создание заявки (без отчества, опционально)
+POST {{baseUrl}}/deal/statement
+Content-Type: application/json
+
+{
+  "amount": 300000,
+  "term": 24,
+  "firstName": "Petr",
+  "lastName": "Petrov",
+  "email": "petr@mail.com",
+  "birthdate": "1985-05-15",
+  "passportSeries": "5678",
+  "passportNumber": "901234"
+}
+
+### 5. Создание заявки - ошибка валидации (слишком молодой)
+POST {{baseUrl}}/deal/statement
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Ivan",
+  "lastName": "Ivanov",
+  "email": "ivan@mail.com",
+  "birthdate": "2015-01-01",
+  "passportSeries": "1234",
+  "passportNumber": "123456"
+}
+
+### 6. Создание заявки - ошибка валидации (неверный email)
+POST {{baseUrl}}/deal/statement
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Ivan",
+  "lastName": "Ivanov",
+  "email": "invalid-email",
+  "birthdate": "1990-01-01",
+  "passportSeries": "1234",
+  "passportNumber": "123456"
+}
+
+### 7. Создание заявки - ошибка валидации (неверный паспорт)
+POST {{baseUrl}}/deal/statement
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "term": 12,
+  "firstName": "Ivan",
+  "lastName": "Ivanov",
+  "email": "ivan@mail.com",
+  "birthdate": "1990-01-01",
+  "passportSeries": "123",
+  "passportNumber": "12345"
+}
+
+### 8. Выбор предложения (после получения предложений, подставьте реальный statementId и одно из предложений)
+# В ответе на /deal/statement вы получите список из 4 LoanOfferDto.
+# Скопируйте одно из них в тело запроса ниже, заменив statementId.
+# Пример тела:
+POST {{baseUrl}}/deal/offer/select
+Content-Type: application/json
+
+{
+  "statementId": "{{statementId}}",
+  "requestedAmount": 500000,
+  "totalAmount": 600000,
+  "term": 12,
+  "monthlyPayment": 45000,
+  "rate": 12.5,
+  "isInsuranceEnabled": true,
+  "isSalaryClient": false
+}
+
+### 9. Завершение регистрации и расчёт кредита (после выбора предложения)
+# Используйте тот же statementId, что и в выборе предложения.
+POST {{baseUrl}}/deal/calculate/{{statementId}}
+Content-Type: application/json
+
+{
+  "gender": "MALE",
+  "maritalStatus": "MARRIED",
+  "dependentAmount": 2,
+  "passportIssueDate": "2010-01-01",
+  "passportIssueBranch": "Отделение УФМС России по г. Москва",
+  "employment": {
+    "employmentStatus": "EMPLOYED",
+    "employerINN": "7707083893",
+    "salary": 150000,
+    "position": "TOP_MANAGER",
+    "workExperienceTotal": 60,
+    "workExperienceCurrent": 24
+  },
+  "accountNumber": "40817810000000000001"
+}
+
+### 10. Завершение регистрации - без страховки, не зарплатный клиент
+POST {{baseUrl}}/deal/calculate/{{statementId}}
+Content-Type: application/json
+
+{
+  "gender": "MALE",
+  "maritalStatus": "SINGLE",
+  "dependentAmount": 0,
+  "passportIssueDate": "2012-06-15",
+  "passportIssueBranch": "Отделение УФМС России по г. Санкт-Петербург",
+  "employment": {
+    "employmentStatus": "SELF_EMPLOYED",
+    "employerINN": "7728168971",
+    "salary": 200000,
+    "position": "ENTREPRENEUR",
+    "workExperienceTotal": 48,
+    "workExperienceCurrent": 36
+  },
+  "accountNumber": "40817810000000000002"
+}
+
+### 11. Завершение регистрации - женщина, со страховкой (влияет на ставку)
+POST {{baseUrl}}/deal/calculate/{{statementId}}
+Content-Type: application/json
+
+{
+  "gender": "FEMALE",
+  "maritalStatus": "DIVORCED",
+  "dependentAmount": 1,
+  "passportIssueDate": "2015-09-01",
+  "passportIssueBranch": "Отделение УФМС России по г. Екатеринбург",
+  "employment": {
+    "employmentStatus": "EMPLOYED",
+    "employerINN": "7702070139",
+    "salary": 120000,
+    "position": "MIDDLE_MANAGER",
+    "workExperienceTotal": 36,
+    "workExperienceCurrent": 18
+  },
+  "accountNumber": "40817810000000000003"
+}
+
+### 12. Завершение регистрации - отказ (безработный, маленький стаж)
+# В этом случае калькулятор должен вернуть ошибку 400 (отказ в кредите)
+POST {{baseUrl}}/deal/calculate/{{statementId}}
+Content-Type: application/json
+
+{
+  "gender": "MALE",
+  "maritalStatus": "SINGLE",
+  "dependentAmount": 0,
+  "passportIssueDate": "2018-01-01",
+  "passportIssueBranch": "Отделение УФМС России по г. Новосибирск",
+  "employment": {
+    "employmentStatus": "UNEMPLOYED",
+    "employerINN": "0000000000",
+    "salary": 0,
+    "position": "UNEMPLOYED",
+    "workExperienceTotal": 0,
+    "workExperienceCurrent": 0
+  },
+  "accountNumber": "40817810000000000004"
+}
+
+### 13. Завершение регистрации - отказ (пенсионный возраст)
+POST {{baseUrl}}/deal/calculate/{{statementId}}
+Content-Type: application/json
+
+{
+  "gender": "MALE",
+  "maritalStatus": "WIDOWED",
+  "dependentAmount": 0,
+  "passportIssueDate": "2000-01-01",
+  "passportIssueBranch": "Отделение УФМС России по г. Казань",
+  "employment": {
+    "employmentStatus": "UNEMPLOYED",
+    "employerINN": "0000000000",
+    "salary": 20000,
+    "position": "RETIRED",
+    "workExperienceTotal": 0,
+    "workExperienceCurrent": 0
+  },
+  "accountNumber": "40817810000000000005"
+}
+
+### 14. Получение OpenAPI спецификации (если настроена springdoc)
+GET {{baseUrl}}/v3/api-docs
+Accept: application/json
+
+### 15. Получение Swagger UI
+GET {{baseUrl}}/swagger-ui/index.html
+Accept: text/html

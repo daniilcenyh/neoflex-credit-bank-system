@@ -1,5 +1,27 @@
 services:
   # ---------------------------------------------------------------------------
+  # База данных для сервиса Deal API
+  # ---------------------------------------------------------------------------
+  deal-postgres-db:
+    image: postgres:17
+    container_name: deal-postgres-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-deal}
+    volumes:
+      - ./infrastructure/databases/deal:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME:-postgres} -p 5432" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - neoflex-bank-credit-network
+
+  # ---------------------------------------------------------------------------
   # Nexus - хранилище артефактов и зависимостей
   # ---------------------------------------------------------------------------
   nexus:
@@ -109,8 +131,9 @@ services:
       - "8092:8092"
     working_dir: /app
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      OTLP_EXPORTER_ENDPOINT: http://tempo:4318
+      SPRING_PROFILES_ACTIVE: elk
+      ENVIRONMENT: production
+      OTLP_EXPORTER_ENDPOINT: ${OTLP_EXPORTER_ENDPOINT:-http://tempo:4318}
     depends_on:
       nexus:
         condition: service_healthy
@@ -122,6 +145,50 @@ services:
     networks:
       - neoflex-bank-credit-network
 
+  # ---------------------------------------------------------------------------
+  # Deal API
+  # ---------------------------------------------------------------------------
+  deal-api:
+    build:
+      context: ./deal-service
+      dockerfile: Dockerfile
+    container_name: deal-api
+    ports:
+      - "8093:8093"
+    working_dir: /app
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST:-deal-postgres-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-deal}
+      SPRING_PROFILES_ACTIVE: elk
+      ENVIRONMENT: production
+      OTLP_EXPORTER_ENDPOINT: ${OTLP_EXPORTER_ENDPOINT:-http://tempo:4318}
+      SHOW_SQL: ${SHOW_SQL:-true}
+      FORMAT_SQL: ${FORMAT_SQL:-true}
+      HIGHLIGHT_SQL: ${HIGHLIGHT_SQL:-true}
+      SLOW_SQL_QUERY_INDICATOR_MS: ${SLOW_SQL_QUERY_INDICATOR_MS:-1500}
+      BASE_URL: http://calculator-api:8092
+      API_GET_OFFERS: http://calculator-api:8092/api/v1/calculator/offers
+      API_CALCULATE_CREDIT: http://calculator-api:8092/api/v1/calculator/calc
+#      BASE_URL: ${BASE_URL:-http://calculator-api:8092}
+#      API_GET_OFFERS: ${API_GET_OFFERS:-http://calculator-api:8092/api/v1/calculator/offers}
+#      API_CALCULATE_CREDIT: ${API_CALCULATE_CREDIT:-http://calculator-api:8092/api/v1/calculator/calc}
+    depends_on:
+      deal-postgres-db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-i", "http://localhost:8093/actuator/health" ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - neoflex-bank-credit-network
+
+  # ---------------------------------------------------------------------------
+  # Grafana
+  # ---------------------------------------------------------------------------
   grafana:
     image: grafana/grafana:10.3.1
     container_name: grafana
@@ -140,18 +207,14 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: true
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
-      # Включаем метрики Grafana
       GF_METRICS_ENABLED: "true"
       GF_METRICS_BASIC_AUTH_USERNAME: admin
       GF_METRICS_BASIC_AUTH_PASSWORD: admin
-      # Включаем логирование
       GF_LOG_LEVEL: info
-      # Настройка доп. возможностей
       GF_INSTALL_PLUGINS: grafana-piechart-panel
     volumes:
       - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
       - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
-      - nexus-data:/nexus-data
     healthcheck:
       test: [ "CMD", "wget", "--spider", "http://localhost:3000/api/health" ]
       interval: 10s
@@ -160,6 +223,108 @@ services:
     networks:
       - neoflex-bank-credit-network
 
+  # =============================================================================
+  # ELK СТЕК - структурированное логирование
+  # =============================================================================
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: elasticsearch_credit_system
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=true
+      - "cluster.name=neoflex-credit-system-elk"
+    ports:
+      - "${ELASTICSEARCH_PORT}:9200"  # HTTP API
+      - "9300:9300"  # Transport protocol
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    networks:
+      - neoflex-bank-credit-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Elasticsearch Exporter для мониторинга в Prometheus
+  elasticsearch-exporter:
+    image: prometheuscommunity/elasticsearch-exporter:latest
+    container_name: elasticsearch_exporter_credit_system
+    command:
+      - '--es.uri=http://elasticsearch:9200'
+      - '--es.all'                 # Собирать метрики со всех нод
+      - '--es.indices'             # Собирать метрики по индексам
+      - '--es.indices_settings'    # Собирать настройки индексов
+      - '--es.shards'              # Собирать метрики по шардам
+    ports:
+      - "9114:9114"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - neoflex-bank-credit-network
+
+  logstash:
+    image: logstash:8.11.0
+    container_name: logstash_credit_system
+    ports:
+      - "${LOGSTASH_PORT}:5000"   # TCP input для логов
+      - "9600:9600"               # Monitoring API
+    volumes:
+      - ./infrastructure/elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./infrastructure/elk/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+    environment:
+      LS_JAVA_OPTS: "-Xms256m -Xmx256m"
+      # Параметры подключения к Elasticsearch
+      ELASTICSEARCH_HOSTS: "http://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - neoflex-bank-credit-network
+
+  kibana:
+    image: kibana:8.11.0
+    container_name: kibana_credit_system
+    ports:
+      - "${KIBANA_PORT}:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: "http://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}"
+      # Локализация
+      I18N_LOCALE: ru
+      # Настройки по умолчанию
+      KIBANA_DEFAULT_APP_ID: discover
+      SERVER_NAME: kibana_credit_system
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - neoflex-bank-credit-network
+
+  # Опционально: Filebeat для сбора логов из файлов (альтернатива TCP)
+  filebeat:
+    image: elastic/filebeat:8.11.0
+    container_name: filebeat_credit_system
+    user: root
+    volumes:
+      - ./infrastructure/elk/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: ["--strict.perms=false"]
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      logstash:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - neoflex-bank-credit-network
 
 volumes:
   artifacts:
@@ -170,6 +335,8 @@ volumes:
   loki_index:
   loki_rules:
   grafana-data:
+  elasticsearch_data:
+  filebeat_data:
 
 networks:
   neoflex-bank-credit-network:

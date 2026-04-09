@@ -15,6 +15,13 @@ scrape_configs:
         labels:
           application: 'calculator-api'
           environment: 'production'
+  - job_name: deal-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: [ 'deal-api:8093' ]
+        labels:
+          application: 'deal-api'
+          environment: 'production'
 
   - job_name: grafana
     metrics_path: /metrics
@@ -24,7 +31,6 @@ scrape_configs:
       username: admin
       password: admin
     scheme: http
-    # Добавьте эти параметры для надежности
     scrape_interval: 30s
     scrape_timeout: 10s
 
@@ -42,3 +48,10 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: [ 'tempo:3200' ]
+
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: [ 'elasticsearch-exporter:9114' ]
+        labels:
+          service: 'elasticsearch'
+          stack: 'elk'

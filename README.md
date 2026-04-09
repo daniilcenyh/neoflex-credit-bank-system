@@ -1,118 +1,117 @@
 # Neoflex Bank Credit System
 
-Микросервисная система для расчета кредитных предложений и скоринга клиентов с полным стеком мониторинга.
+Микросервисная система для расчёта кредитных предложений и скоринга клиентов.  
+Состоит из двух сервисов: `calculator-api` (кредитный калькулятор) и `deal-api` (работа со сделками).  
+Полный стек мониторинга: Prometheus, Grafana, Loki, Tempo, ELK.
 
-## Содержание
-- [Требования](#требования)
-- [Структура проекта](#структура-проекта)
-- [Быстрый запуск](#быстрый-запуск)
-- [Команды Makefile](#команды-makefile)
-- [Сервисы и порты](#сервисы-и-порты)
-- [API методы](#api-методы)
-- [Мониторинг](#мониторинг)
-- [Проверка работоспособности](#проверка-работоспособности)
-- [Устранение проблем](#устранение-проблем)
+---
 
 ## Требования
 
-- Docker 24.0+
-- Docker Compose 2.20+
-- Make (опционально, для использования Makefile)
-- 8 GB RAM минимум
-- 20 GB свободного места на диске
+- Docker 24.0+, Docker Compose 2.20+
+- Make (рекомендуется) или использование команд docker-compose вручную
+- 8 ГБ ОЗУ (минимум), 20 ГБ дискового пространства
+- Для **Windows**: запуск терминала (PowerShell, Git Bash, CMD) **от имени администратора**
+
+---
 
 ## Структура проекта
 
 ```
-neoflex-bank-credit-system/
-├── calculator-service/              # Микросервис калькулятора
-│   ├── src/
-│   ├── Dockerfile
-│   └── build.gradle.kts
-├── infrastructure/                  # Конфигурация инфраструктуры
-│   ├── prometheus/
-│   │   └── prometheus.yml          # Конфигурация Prometheus
-│   ├── grafana/
-│   │   ├── provisioning/
-│   │   │   ├── datasources/        # Источники данных
-│   │   │   └── dashboards/         # Конфигурация дашбордов
-│   │   └── dashboards/              # JSON дашбордов
-│   ├── loki/
-│   │   └── loki-config.yaml        # Конфигурация Loki
-│   ├── tempo/
-│   │   └── tempo.yaml              # Конфигурация Tempo
-│   └── alloy/
-│       └── config.alloy            # Конфигурация Alloy
-├── docker-compose.yaml              # Docker Compose конфигурация
-├── Makefile                         # Команды для управления
-└── README.md                        # Документация
+.
+├── calculator-service/           # сервис калькулятора
+├── deal-service/                 # сервис сделок
+├── infrastructure/
+│   ├── prometheus/               # конфиг Prometheus
+│   ├── grafana/                  # дашборды и datasource
+│   ├── loki/                     # конфиг Loki
+│   ├── tempo/                    # конфиг Tempo
+│   ├── alloy/                    # конфиг Alloy (otel collector)
+│   ├── elk/                      # logstash, filebeat
+│   └── databases/deal/           # SQL-скрипты инициализации БД
+├── docker-compose.yaml
+├── Makefile
+└── README.md
 ```
 
-## Быстрый запуск
+---
 
-### 1. Клонирование репозитория
+## Быстрый запуск (всё одной командой)
+
 ```bash
 git clone <repository-url>
 cd neoflex-bank-credit-system
-```
-
-### 2. Запуск всех сервисов
-```bash
-# Вариант 1: через Makefile
 make all
-
-# Вариант 2: напрямую через docker-compose
-docker-compose up -d
 ```
 
-### 3. Проверка статуса
-```bash
-docker-compose ps
-```
+Через несколько минут будут доступны:
+- Calculator API: http://localhost:8092
+- Deal API: http://localhost:8093
+- Grafana: http://localhost:3000 (admin/admin)
+- Остальные сервисы (см. таблицу портов)
+
+---
+
+## Пошаговый запуск
+
+| Шаг | Команда | Что делает |
+|-----|---------|-------------|
+| 1 | `make start-infra` | Запуск Nexus, Prometheus, Loki, Tempo, Alloy |
+| 2 | `make build-calculator` | Сборка образа calculator-api, публикация JAR в Nexus |
+| 3 | `make build-deal` | Сборка образа deal-api, публикация JAR в Nexus |
+| 4 | `make start-apps` | Запуск PostgreSQL, calculator-api, deal-api, Grafana |
+| 5 | `make start-elk` | Запуск Elasticsearch, Logstash, Kibana, Filebeat |
+
+После выполнения всех шагов система полностью готова.
+
+---
 
 ## Команды Makefile
 
 | Команда | Описание |
 |---------|----------|
-| `make all` | Полный запуск всех сервисов |
-| `make up` | Запуск только Nexus |
-| `make build-calculator` | Сборка и запуск calculator-api |
-| `make start` | Запуск всех сервисов |
-| `make stop` | Остановка всех сервисов |
-| `make clean` | Полная очистка (контейнеры + тома) |
-| `make logs` | Просмотр логов всех сервисов |
-| `make infra` | Запуск только инфраструктуры |
-| `make infra-stop` | Остановка инфраструктуры |
-| `make rebuild` | Пересборка с нуля |
+| `make all` | Полный запуск (инфра → сборка → приложения → ELK) |
+| `make start-infra` | Запуск инфраструктуры (Nexus, Prometheus, Loki, Tempo, Alloy) |
+| `make build-calculator` | Сборка calculator-api |
+| `make build-deal` | Сборка deal-api |
+| `make start-apps` | Запуск БД, сервисов, Grafana |
+| `make start-elk` | Запуск ELK-стека |
+| `make stop-elk` | Остановка ELK |
+| `make stop` | Остановка всех контейнеров |
+| `make clean` | Полная очистка (контейнеры, тома, build-директории) |
+| `make logs` | Логи всех сервисов |
+| `make logs-calculator` | Логи calculator-api |
+| `make logs-deal` | Логи deal-api |
+| `make status` | Статус контейнеров |
+| `make rebuild` | `make clean && make all` |
+| `make help` | Справка по командам |
+
+---
 
 ## Сервисы и порты
 
-После запуска становятся доступны следующие сервисы:
+| Сервис | URL / хост:порт | Логин / пароль |
+|--------|----------------|----------------|
+| Calculator API | http://localhost:8092 | – |
+| Deal API | http://localhost:8093 | – |
+| Swagger (Calculator) | http://localhost:8092/swagger-ui.html | – |
+| Swagger (Deal) | http://localhost:8093/swagger-ui.html | – |
+| PostgreSQL (deal) | localhost:5434 | postgres / postgres |
+| Nexus | http://localhost:8081 | admin / admin |
+| Prometheus | http://localhost:9090 | – |
+| Grafana | http://localhost:3000 | admin / admin |
+| Loki | http://localhost:3100 | – |
+| Tempo | http://localhost:3200 | – |
+| Alloy (OTLP) | http://localhost:4318 | – |
+| Elasticsearch | http://localhost:9200 | – |
+| Kibana | http://localhost:5601 | – |
 
-| Сервис             | URL | Доступ | Назначение                          |
-|--------------------|-----|--------|-------------------------------------|
-| **Calculator API** | http://localhost:8092 | - | Основной микросервис                |
-| **Nexus**          | http://localhost:8081 | admin/admin | Хранилище артефактов                |
-| **Prometheus**     | http://localhost:9090 | - | Сбор метрик                         |
-| **Grafana**        | http://localhost:3000 | admin/admin | Визуализация                        |
-| **Loki**           | http://localhost:3100 | - | Хранение логов                      |
-| **Tempo**          | http://localhost:3200 | - | Хранение трейсов                    |
-| **Alloy**          | http://localhost:9080 | - | Сбор телеметрии                     |
-| **Swagger UI**      | http://localhost:8092/swagger-ui.html | - | Документация сервиса calculator-api |
+---
 
-## API методы
+## API примеры
 
-### Health Check
-```bash
-curl http://localhost:8092/actuator/health
-```
+### Calculator API – получить кредитные предложения
 
-### Метрики Prometheus
-```bash
-curl http://localhost:8092/actuator/prometheus
-```
-
-### Расчет предложений
 ```bash
 curl -X POST http://localhost:8092/api/v1/calculator/offers \
   -H "Content-Type: application/json" \
@@ -128,7 +127,8 @@ curl -X POST http://localhost:8092/api/v1/calculator/offers \
   }'
 ```
 
-### Полный расчет кредита
+### Calculator API – полный расчёт кредита (со скорингом)
+
 ```bash
 curl -X POST http://localhost:8092/api/v1/calculator/calc \
   -H "Content-Type: application/json" \
@@ -159,140 +159,110 @@ curl -X POST http://localhost:8092/api/v1/calculator/calc \
   }'
 ```
 
-## Мониторинг
+### Deal API – создать заявку
 
-### Grafana дашборды
-1. Открыть http://localhost:3000
-2. Логин: admin, пароль: admin
-3. Перейти в Dashboards → Browse
-4. Выбрать "Calculator API - Minimal Dashboard"
+```bash
+curl -X POST http://localhost:8093/api/v1/deal/statement \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 500000,
+    "term": 12,
+    "firstName": "Ivan",
+    "lastName": "Ivanov",
+    "email": "ivan@mail.com",
+    "birthdate": "1990-01-01",
+    "passportSeries": "1234",
+    "passportNumber": "123456"
+  }'
+```
 
-Доступные метрики:
-- Статус сервиса
-- Количество запросов
-- Ошибки 5xx
-- Бизнес-метрики (offers/credit)
-- Время ответа
-- Память и CPU
-
-### Prometheus targets
-1. Открыть http://localhost:9090/targets
-2. Проверить статусы:
-    - calculator-api: UP
-    - prometheus: UP
-
-### Loki логи
-В Grafana:
-1. Explore → выбрать Loki
-2. Выполнить запрос:
-   ```
-   {container="calculator-api"}
-   ```
-
-### Tempo трейсы
-В Grafana:
-1. Explore → выбрать Tempo
-2. Поиск по trace ID или сервису
+---
 
 ## Проверка работоспособности
 
-### 1. Статус контейнеров
-```bash
-docker-compose ps
-```
-Все контейнеры должны быть в статусе `Up` и `healthy`.
+1. **Статус контейнеров**  
+   `make status` – все контейнеры должны быть `Up` или `healthy`.
 
-### 2. Доступность API
-```bash
-curl http://localhost:8092/actuator/health
-```
-Ожидаемый ответ: `{"status":"UP"}`
+2. **Healthcheck API**
+   ```bash
+   curl http://localhost:8092/actuator/health
+   curl http://localhost:8093/actuator/health
+   ```
+   Ответ: `{"status":"UP"}`
 
-### 3. Метрики в Prometheus
-Открыть http://localhost:9090 и выполнить запрос:
-```
-up{job="calculator-api"}
-```
-Ожидаемое значение: `1`
+3. **Метрики Prometheus**  
+   Открыть http://localhost:9090 → выполнить запрос `up{job="calculator-api"}` → значение `1`.
 
-### 4. Данные в Grafana
-Открыть дашборд и убедиться, что:
-- Статус сервиса = 1
-- Появляются значения после выполнения запросов к API
+4. **Логи в Loki**  
+   Grafana → Explore → Loki → запрос `{container="calculator-api"}` → должны быть логи.
+
+5. **Артефакты в Nexus**  
+   http://localhost:8081 → Browse → `maven-snapshots/com/neoflex/` → присутствуют `calculator-api` и `deal-api`.
+
+---
 
 ## Устранение проблем
 
-### Проблема: контейнеры не стартуют
+### Контейнер не запускается / падает
 ```bash
-# Проверить логи
-docker-compose logs [service-name]
-
-# Перезапустить с очисткой
-docker-compose down -v
-docker-compose up -d
+docker-compose logs <service-name>
 ```
 
-### Проблема: calculator-api не виден в Prometheus
+### Nexus недоступен при сборке
 ```bash
-# Проверить доступность метрик
+make start-infra          # дождаться healthcheck (2-3 минуты)
+curl http://localhost:8081/service/rest/v1/status   # должен вернуть "ok"
+```
+
+### Deal API не видит PostgreSQL
+Проверить переменные окружения в `docker-compose.yaml` для `deal-api`:
+```
+POSTGRES_HOST=deal-postgres-db
+POSTGRES_PORT=5432
+```
+Проверить, что БД запущена: `make db`
+
+### Нет метрик в Prometheus
+Убедиться, что сервисы `calculator-api` и `deal-api` запущены и их `/actuator/prometheus` доступен:
+```bash
 docker exec -it prometheus wget -O- http://calculator-api:8092/actuator/prometheus
-
-# Проверить сеть
-docker network inspect neoflex-bank-credit
 ```
 
-### Проблема: Grafana не видит источники данных
-1. Открыть http://localhost:3000
-2. Configuration → Data Sources
-3. Выбрать Prometheus
-4. Нажать "Save & Test"
-5. Ожидаемый результат: "Data source is working"
-
-### Проблема: нет данных в дашбордах
+### Недостаточно памяти
+Увеличить ресурсы Docker Desktop (8+ ГБ). Отключить ELK, если не нужен:
 ```bash
-# Выполнить тестовые запросы к API (примеры выше)
-# Подождать 30 секунд
-# Проверить наличие метрик в Prometheus:
-# - calculator_offers_calculated_total
-# - calculator_credit_calculated_total
-# - http_server_requests_seconds_count
+make stop-elk
 ```
 
-### Проблема: не хватает памяти
+### Полный сброс и перезапуск
 ```bash
-# Проверить использование памяти
-docker stats
-
-# При необходимости увеличить лимиты в Docker Desktop
-# Settings → Resources → Memory
+make clean
+make all
 ```
 
-### Полный сброс системы
-```bash
-# Остановить все контейнеры
-docker-compose down -v
+---
 
-# Удалить неиспользуемые тома
-docker volume prune -f
+## Примечание для Windows
 
-# Пересобрать и запустить
-docker-compose up -d --build
+**Запускайте терминал от имени администратора** (правый клик → "Запуск от имени администратора").  
+Без прав администратора сборка Docker-образов завершится ошибкой доступа к временным файлам `C:\Windows\TEMP`.
+
+---
+
+## Файлы конфигурации
+
+- `docker-compose.yaml` – оркестрация всех сервисов
+- `Makefile` – цели для управления
+- `infrastructure/prometheus/prometheus.yml` – настройка сбора метрик
+- `infrastructure/grafana/provisioning/` – автоматическая настройка datasource и дашбордов
+- `infrastructure/loki/loki-config.yaml` – конфиг Loki
+- `infrastructure/tempo/tempo.yaml` – конфиг Tempo
+- `infrastructure/alloy/config.alloy` – приём OTLP и маршрутизация в Prometheus/Loki/Tempo
+- `infrastructure/elk/logstash/pipeline/` – конфиги Logstash
+- `infrastructure/databases/deal/` – SQL-скрипты инициализации БД
+
+---
+
+**Готово.** После выполнения `make all` система полностью функционирует.  
+Для остановки: `make stop`. Для удаления всех данных: `make clean`.
 ```
-
-## Примечания
-
-- Первый запуск Nexus может занять 2-3 минуты
-- Для сбора бизнес-метрик необходимо выполнить хотя бы один запрос к API
-- Все метрики собираются с интервалом 15 секунд
-- Логи хранятся в Loki 24 часа (конфигурируется)
-- Трейсы хранятся в Tempo 7 дней (конфигурируется)
-
-## Важное примечание для Windows
-
-Для корректной работы проекта при использовании Makefile **необходимо запускать терминал (CMD, PowerShell, Git Bash или IDE) от имени администратора**. Это связано с тем, что Docker при сборке образа создает временные файлы в директории `C:\Windows\TEMP`, доступ к которой требует повышенных привилегий.
-
-**Как запустить:**
-- **Git Bash / PowerShell / CMD**: правый клик → "Запустить от имени администратора"
-- **IntelliJ IDEA**: правый клик на ярлыке → "Запустить от имени администратора"
-
-Только при таком запуске команда `make all` отработает без ошибок доступа к временным файлам.

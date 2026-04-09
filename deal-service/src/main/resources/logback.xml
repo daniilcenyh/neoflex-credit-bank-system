@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="service" source="spring.application.name" defaultValue="deal-service"/>
+    <springProperty scope="context" name="environment" source="ENVIRONMENT" defaultValue="development"/>
+
+    <springProfile name="default">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [trace_id=%X{trace_id:-}, spanId=%X{spanId:-}] %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="elk">
+        <!-- Консольный вывод (как было) -->
+        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <includeMdc>true</includeMdc>
+                <customFields>{"service":"${service}","environment":"${environment}"}</customFields>
+                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                    <maxLength>2048</maxLength>
+                </throwableConverter>
+            </encoder>
+        </appender>
+
+        <!-- НОВЫЙ аппендер: отправка в Logstash -->
+        <appender name="LOGSTASH_TCP" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+            <destination>logstash_credit_system:5000</destination>
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <includeMdc>true</includeMdc>
+                <customFields>{"service":"${service}","environment":"${environment}"}</customFields>
+                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                    <maxLength>2048</maxLength>
+                </throwableConverter>
+            </encoder>
+            <keepAliveDuration>5 minutes</keepAliveDuration>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+            <appender-ref ref="LOGSTASH_TCP"/>   <!-- Логи пойдут и в консоль, и в Logstash -->
+        </root>
+    </springProfile>
+
+    <logger name="com.neoflex.deal" level="DEBUG"/>
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+</configuration>

@@ -73,12 +73,12 @@ components:
     # Enums
     Gender:
       type: string
-      enum: [MALE, FEMALE]
+      enum: [MALE, FEMALE, NON_BINARY]
       description: Пол клиента
 
     MaritalStatus:
       type: string
-      enum: [MARRIED, DIVORCED, SINGLE, WIDOWED]
+      enum: [MARRIED, DIVORCED, SINGLE, WIDOW_WIDOWER]
       description: Семейное положение
 
     EmploymentStatus:
