@@ -20,16 +20,16 @@ spring:
       ddl-auto: validate
     properties:
       org.hibernate:
-        envers:
-          autoRegisterListeners: true
-          audit_table_suffix: _history
-          default_schema: person_history
-          store_data_at_delete: true
-          revision_field_name: revision
-          revision_type_field_name: revision_type
-          revision_sequence_name: person_history.revinfo_seq
+#        envers:
+#          autoRegisterListeners: true
+#          audit_table_suffix: _history
+#          default_schema: deal_history
+#          store_data_at_delete: true
+#          revision_field_name: revision
+#          revision_type_field_name: revision_type
+#          revision_sequence_name: deal_history.revinfo_seq
         hibernate:
-          default_schema: person
+          default_schema: deal
           show_sql: ${SHOW_SQL:true}
           format_sql: ${FORMAT_SQL:true}
           highlight_sql: ${HIGHLIGHT_SQL:true}
@@ -96,6 +96,5 @@ logging:
   config: "classpath:logback.xml"
 
 calculator-api:
-  base-url: ${BASE_URL:http://localhost:8092}
   api-get-offers: ${API_GET_OFFERS:http://localhost:8092/api/v1/calculator/offers}
   api-calculate-credit: ${API_CALCULATE_CREDIT:http://localhost:8092/api/v1/calculator/calc}

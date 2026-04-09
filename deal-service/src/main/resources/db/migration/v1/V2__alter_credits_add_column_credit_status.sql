@@ -1,0 +1,2 @@
+ALTER TABLE deal.credits
+    ADD COLUMN credit_status VARCHAR(50) NOT NULL DEFAULT 'CALCULATED';

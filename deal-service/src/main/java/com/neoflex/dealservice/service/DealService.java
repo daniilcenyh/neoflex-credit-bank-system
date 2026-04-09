@@ -3,6 +3,7 @@ package com.neoflex.dealservice.service;
 import com.neoflex.deal.dto.ApplicationStatus;
 import com.neoflex.deal.dto.ChangeType;
 import com.neoflex.deal.dto.CreditDto;
+import com.neoflex.deal.dto.CreditStatus;
 import com.neoflex.deal.dto.EmploymentDto;
 import com.neoflex.deal.dto.FinishRegistrationRequestDto;
 import com.neoflex.deal.dto.LoanOfferDto;
@@ -66,25 +67,10 @@ public class DealService {
             throw new PassportAlreadyExistException("Паспорт с серией " + request.getPassportSeries() + " и номером " + request.getPassportNumber() + " уже существует");
         }
         // 2) маппинг из запроса в сущность (поля какие доступны)
-        // TODO: сделать правильный маппер
-        Passport newPassportToSave = Passport.builder()
-                .series(request.getPassportSeries())
-                .number(request.getPassportNumber())
-                .created(Instant.now())
-                .updated(Instant.now())
-                .issueBranch(null)
-                .issueDate(null)
-                .build();
+        Passport newPassportToSave = buildPassport(request);
 
         // 3) маппинг клиента из запроса в сущность
-        // TODO: сделать правильный маппер
-        Client newClientToSave = Client.builder()
-                .email(request.getEmail())
-                .firstName(request.getFirstName())
-                .middleName(request.getMiddleName())
-                .lastName(request.getLastName())
-                .birthDate(request.getBirthdate())
-                .build();
+        Client newClientToSave = buildClient(request);
 
         newClientToSave.setPassport(newPassportToSave);
 
@@ -130,6 +116,26 @@ public class DealService {
             MDC.remove("amount");
             MDC.remove("statement_status");
         }
+    }
+
+    private static Client buildClient(LoanStatementRequestDto request) {
+        return Client.builder()
+                .email(request.getEmail())
+                .firstName(request.getFirstName())
+                .middleName(request.getMiddleName())
+                .lastName(request.getLastName())
+                .birthDate(request.getBirthdate())
+                .build();
+    }
+
+    private static Passport buildPassport(LoanStatementRequestDto request) {
+        return Passport.builder()
+                .series(request.getPassportSeries())
+                .number(request.getPassportNumber())
+                .updated(Instant.now())
+                .issueBranch(null)
+                .issueDate(null)
+                .build();
     }
 
     @Transactional
@@ -245,6 +251,7 @@ public class DealService {
                 .isInsuranceEnabled(creditDto.getIsInsuranceEnabled())
                 .isSalaryClient(creditDto.getIsSalaryClient())
                 .paymentSchedule(creditDto.getPaymentSchedule())
+                .creditStatus(CreditStatus.ISSUED)
                 .build();
 
         var savedCredit = creditRepository.save(creditToSave);

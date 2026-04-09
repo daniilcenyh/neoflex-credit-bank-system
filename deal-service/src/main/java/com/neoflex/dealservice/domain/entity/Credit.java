@@ -1,5 +1,6 @@
 package com.neoflex.dealservice.domain.entity;
 
+import com.neoflex.deal.dto.CreditStatus;
 import com.neoflex.deal.dto.PaymentScheduleElementDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -64,6 +65,9 @@ public class Credit {
     @Column(name = "payment_schedule", columnDefinition = "jsonb")
     private List<PaymentScheduleElementDto> paymentSchedule;
 
+    @Column(name = "credit_status", nullable = false)
+    private CreditStatus creditStatus;
+
     @OneToOne(mappedBy = "credit")
     private Statement statement;
 
@@ -80,6 +84,9 @@ public class Credit {
         Instant now = Instant.now();
         created = now;
         updated = now;
+        if (creditStatus == null) {
+            creditStatus = CreditStatus.CALCULATED;
+        }
     }
 
     @PreUpdate

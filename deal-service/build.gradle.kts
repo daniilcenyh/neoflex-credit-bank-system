@@ -68,7 +68,6 @@ dependencies {
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.9.2")
     // Jackson для JSON-сериализации
     implementation("com.fasterxml.jackson.module:jackson-module-jakarta-xmlbind-annotations")
-    // Временно добавьте для проверки
     implementation("org.hibernate.orm:hibernate-core:6.6.0.Final")
 
     // OBSERVABILITY
